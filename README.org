@@ -1,0 +1,8 @@
+
+* grant reminders access
+#+begin_src shell
+  osascript -e 'tell application "Reminders" to show (first list whose name is "blabla")'
+#+end_src
+run is in eshell, it will populate permission for Emacs
+
+"error: you need to grant reminders access\n"
