@@ -54,7 +54,7 @@
     (":END:")
     (:notes)))
 
-(defun org-reminders ()
+(defun org-reminders (&optional position)
   "Render reminders list by org-mode."
   (interactive)
   (setq org-reminders--groups (make-hash-table :test #'equal))
@@ -67,7 +67,10 @@
     (org-mode)
     (org-fold-hide-sublevels 1)
     (org-update-statistics-cookies t)
-    (goto-char (point-min))))
+    (unless position
+      (setq position (point-min)))
+    (goto-char position)
+    (org-cycle)))
 
 (defun org-reminders--add (reminder)
   "Add REMINDER to reminders."
@@ -271,7 +274,8 @@
   "Sync list."
   (unless (member list-name org-reminders--lists)
     (org-reminders-run-command :new-list
-                               :list-name list-name)))
+                               :list-name list-name)
+    (push list-name org-reminders--lists)))
 
 (defun org-reminders-sync-reminder (reminder)
   "Sync reminders reminder."
@@ -286,11 +290,23 @@
 
 (defun org-reminders-sync-element ()
   "Sync Element in current pointer."
-  (interactive)
-  (let ((element (org-reminders--get-element)))
+  (let ((element (org-reminders--get-element))
+        (position (point)))
     (pcase (car element)
       ('reminder (org-reminders-sync-reminder (cdr element)))
       ('list (org-reminders-sync-list (cdr element))))))
+
+(defun org-reminders-sync ()
+  "Sync Element in current buffer."
+  (interactive)
+  (let ((position (point)))
+    (save-excursion
+      (org-fold-show-all)
+      (goto-char (point-min))
+      (while (not (eobp))
+        (org-next-visible-heading 1)
+        (org-reminders-sync-element))
+      (org-reminders position))))
 
 (provide 'org-reminders)
 ;;; org-reminders.el ends here
