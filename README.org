@@ -1,3 +1,83 @@
+#+TITLE: org-reminders
+
+org-reminders is an Emacs plugin designed to facilitate interactions between macOS Reminders and Org mode. The plugin allows you to manage reminders stored in macOS Reminders from within Org mode, providing a seamless experience for users who rely on both systems.
+
+* Features
+
+- **Add Reminders**: Easily add new reminders to specific lists in macOS Reminders.
+- **Edit Reminders**: Update the title, notes, and priority of existing reminders.
+- **Complete and Uncomplete Reminders**: Toggle the completion status of your reminders.
+- **Delete Reminders**: Remove reminders from your lists.
+- **Display Reminders**: Render reminders in an organized manner using Org mode structure.
+- **Sync Functionality**: Synchronize reminders between macOS Reminders and Org mode.
+
+* Installation
+
+To install `org-reminders`, follow these steps:
+
+1. Download the `org-reminders.el` file.
+2. Place it in your Emacs load path.
+3. Add the following line to your Emacs configuration file (e.g., `.emacs` or `init.el`):
+
+   ```elisp
+   (require 'org-reminders)
+   ```
+
+* Usage
+
+** Viewing Reminders
+
+To view your reminders, run the following command:
+
+```elisp
+M-x org-reminders
+```
+
+This command will switch to a buffer named `*reminders*` and display all your reminders organized by lists.
+
+** Adding a Reminder
+
+To add a reminder, create a new Org heading under the desired list and include the relevant properties such as title, notes, and priority. Then call the sync command:
+
+```elisp
+M-x org-reminders-sync
+```
+
+** Editing a Reminder
+
+Navigate to the reminder you want to edit in the `*reminders*` buffer and modify its heading or properties. After editing, call:
+
+```elisp
+M-x org-reminders-sync
+```
+
+This will update the reminder in macOS Reminders.
+
+** Syncing Reminders
+
+For the latest changes or to ensure everything is up-to-date, you can sync all reminders by invoking:
+
+```elisp
+M-x org-reminders-sync
+```
+
+** Key Functions
+
+- `org-reminders`: Displays reminders.
+- `org-reminders-sync`: Syncs the current element.
+- `org-reminders-insert-list`: Inserts a reminder list.
+- `org-reminders-insert-reminder`: Inserts a reminder.
+
+* Contributions
+
+Contributions are welcome! Please submit issues and pull requests through the project’s repository.
+
+* Acknowledgments
+
+- Inspired by the functionalities of org-mode and macOS Reminders.
+- Special thanks to the Emacs community for continuous support and improvements.
+
+For detailed documentation and further customization, you may want to explore the code comments within the `org-reminders.el` file. Happy organizing!
 
 * grant reminders access
 #+begin_src shell

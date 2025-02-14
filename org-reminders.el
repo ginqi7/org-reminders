@@ -26,6 +26,8 @@
 
 (require 'org)
 
+(defvar org-reminders--buffer-name "*reminders*")
+
 (defvar org-reminders--groups nil)
 
 (defvar org-reminders--lists nil)
@@ -42,6 +44,7 @@
    :edit '("reminders edit" :list-name :external-id :title
            ("--notes" . :notes))
    :show '("reminders show" :list-name "--include-completed -f json")
+   :show-all '("reminders show-all --include-completed -f json")
    :show-lists '("reminders show-lists -f json")
    :new-list '("reminders new-list" :list-name)))
 
@@ -57,20 +60,13 @@
 (defun org-reminders (&optional position)
   "Render reminders list by org-mode."
   (interactive)
-  (setq org-reminders--groups (make-hash-table :test #'equal))
-  (switch-to-buffer "*reminders*")
-  (let ((buffer-read-only))
-    (org-reminders--get-all-lists)
-    (erase-buffer)
-    (insert "#+TITLE: Reminders\n")
-    (seq-do #'org-reminders-insert-list org-reminders--lists)
-    (org-mode)
-    (org-fold-hide-sublevels 1)
-    (org-update-statistics-cookies t)
-    (unless position
-      (setq position (point-min)))
-    (goto-char position)
-    (org-cycle)))
+  (org-reminders--refresh-data)
+  (switch-to-buffer org-reminders--buffer-name)
+  (org-reminders--insert-data)
+  (unless position
+    (setq position (point-min)))
+  (goto-char position)
+  (org-reminders-mode))
 
 (defun org-reminders--add (reminder)
   "Add REMINDER to reminders."
@@ -115,6 +111,7 @@
                                  :notes new-notes))))
 
 (defun org-reminders--expand-template (&rest args)
+  "Expand template by ARGS."
   (string-join
    (delete nil
            (mapcar
@@ -135,18 +132,11 @@
   "Find original reminder by ID."
   (let* ((list-name (gethash "list" reminder))
          (external-id (gethash "externalId" reminder))
-         (entries (gethash list-name org-reminders--groups)))
-    (when entries
-      (cl-find-if
-       (lambda (reminder) (equal external-id (gethash "externalId" reminder)))
-       entries))))
-
-(defun org-reminders--get-all-lists ()
-  "Get all lists."
-  (setq org-reminders--lists (org-reminders-run-command :show-lists
-                                                        :parse-json t)))
+         (reminders (gethash list-name org-reminders--groups)))
+    (gethash external-id reminders)))
 
 (defun org-reminders--get-list (heading)
+  "Get list name from HEADING."
   (replace-regexp-in-string
    " +\\[[^]]+\\]" ""
    (org-element-property :title heading)))
@@ -189,9 +179,12 @@
         (puthash "list" (org-reminders--get-list parent-heading) reminder)
         (puthash "isCompleted" (string= "DONE" heading-todo)
                  reminder)
+        (puthash "deleted" (string= "DELETED" heading-todo)
+                 reminder)
         reminder))))
 
 (defun org-reminders--get-element ()
+  "Get Element in current pointer."
   (save-excursion
     (org-narrow-to-subtree)
     (goto-char (point-min))
@@ -208,18 +201,6 @@
                              :list-name list-name
                              :parse-json t))
 
-(defun org-reminders--toggle-state (reminder original-reminder)
-  "Toggle reminder state."
-  (let* ((new-completed (gethash "isCompleted" reminder))
-         (origin-completed (gethash "isCompleted" original-reminder))
-         (list-name (gethash "list" reminder))
-         (external-id (gethash "externalId" reminder))
-         (command-key (if new-completed :complete :uncomplete)))
-    (unless (equal new-completed origin-completed)
-      (org-reminders-run-command command-key
-                                 :list-name list-name
-                                 :external-id external-id))))
-
 (defun org-reminders-insert-reminder (reminder)
   "Insert reminder."
   (insert (org-reminders--expand-template
@@ -229,6 +210,20 @@
            :external-id  (gethash "externalId" reminder)
            :priority (number-to-string (gethash "priority" reminder))
            :notes (gethash "notes" reminder))))
+
+(defun org-reminders--insert-list (list-name)
+  "Insert List."
+  (let ((reminders (hash-table-values (gethash list-name org-reminders--groups))))
+    (insert (format "\n* %s [/]\n" list-name))
+    (seq-do #'org-reminders-insert-reminder reminders)))
+
+(defun org-reminders--insert-data ()
+  "Insert reminders data into buffer."
+  (let ((buffer-read-only))
+    (erase-buffer)
+    (insert "#+TITLE: Reminders\n")
+    (seq-do #'org-reminders--insert-list org-reminders--lists)
+    (org-reminders-mode)))
 
 (defun org-reminders-run-command (command-key &rest args)
   "Run reminders cli command."
@@ -263,12 +258,47 @@
        (message "An error occurred: %s" result-str)))
     result))
 
-(defun org-reminders-insert-list (list-name)
-  "Insert List."
-  (let ((reminder (org-reminders--get-reminder-in-list list-name)))
-    (insert (format "\n* %s [/]\n" list-name))
-    (puthash list-name reminder org-reminders--groups)
-    (seq-do #'org-reminders-insert-reminder reminder)))
+(defun org-reminders--refresh-data ()
+  "Refresh data."
+  (setq org-reminders--lists (org-reminders-run-command :show-lists :parse-json t))
+  (setq org-reminders--groups (make-hash-table :test #'equal))
+  (dolist (list-name org-reminders--lists)
+    (puthash list-name (make-hash-table :test #'equal) org-reminders--groups))
+  (dolist (reminder (org-reminders-run-command :show-all :parse-json t))
+    (let* ((external-id (gethash "externalId" reminder))
+           (list-name  (gethash "list" reminder))
+           (reminders (gethash list-name org-reminders--groups)))
+      (when reminders
+        (puthash external-id reminder reminders)
+        (puthash list-name reminders org-reminders--groups)))))
+
+(defun org-reminders--toggle-state (reminder original-reminder)
+  "Toggle reminder state."
+  (let* ((new-completed (gethash "isCompleted" reminder))
+         (origin-completed (gethash "isCompleted" original-reminder))
+         (list-name (gethash "list" reminder))
+         (external-id (gethash "externalId" reminder))
+         (command-key (if new-completed :complete :uncomplete)))
+    (unless (equal new-completed origin-completed)
+      (org-reminders-run-command command-key
+                                 :list-name list-name
+                                 :external-id external-id))))
+
+(defun org-reminders-delete-reminder (reminder)
+  "Delete REMINDER."
+  (let ((external-id (gethash "externalId" reminder))
+        (list-name (gethash "list" reminder)))
+    (org-reminders-run-command :delete
+                               :external-id external-id
+                               :list-name list-name)))
+
+(defun org-reminders-delete-element ()
+  "Delete Element in current pointer."
+  (interactive)
+  (let ((element (org-reminders--get-element))
+        (position (point)))
+    (pcase (car element)
+      ('reminder (org-reminders-delete-reminder (cdr element))))))
 
 (defun org-reminders-sync-list (list-name)
   "Sync list."
@@ -279,14 +309,15 @@
 
 (defun org-reminders-sync-reminder (reminder)
   "Sync reminders reminder."
-  (interactive)
   (let* ((original-reminder (org-reminders--find-original-reminder reminder))
          (point (point)))
-    (if original-reminder
-        (progn
-          (org-reminders--toggle-state reminder original-reminder)
-          (org-reminders--edit reminder original-reminder))
-      (org-reminders--add reminder))))
+    (if (gethash "deleted" reminder)
+        (org-reminders--delete reminder)
+      (if original-reminder
+          (progn
+            (org-reminders--toggle-state reminder original-reminder)
+            (org-reminders--edit reminder original-reminder))
+        (org-reminders--add reminder)))))
 
 (defun org-reminders-sync-element ()
   "Sync Element in current pointer."
@@ -296,6 +327,23 @@
       ('reminder (org-reminders-sync-reminder (cdr element)))
       ('list (org-reminders-sync-list (cdr element))))))
 
+(define-derived-mode org-reminders-mode org-mode "Org-Reminders"
+  "Major mode for managing reminders in Org mode."
+  (defface org-deleted
+    '((t (:foreground "gray" :slant italic :strike-through t)))
+    "Face for DELETED headlines in Org mode.")
+  ;;Set task status
+  (setq org-todo-keywords '((sequence "TODO" "DONE" "DELETED")))
+  ;; Set status color
+  (setq org-todo-keyword-faces
+        '(("TODO" . org-warning)
+          ("DONE" . org-done)
+          ("DELETED" . org-deleted)))
+
+  (org-fold-hide-sublevels 1)
+  (org-update-statistics-cookies t)
+  (org-cycle))
+
 (defun org-reminders-sync ()
   "Sync Element in current buffer."
   (interactive)
@@ -303,8 +351,7 @@
     (save-excursion
       (org-fold-show-all)
       (goto-char (point-min))
-      (while (not (eobp))
-        (org-next-visible-heading 1)
+      (while (= 0 (org-next-visible-heading 1))
         (org-reminders-sync-element))
       (org-reminders position))))
 
