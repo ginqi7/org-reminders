@@ -4,6 +4,8 @@
 
 org-reminders is an Emacs plugin designed to facilitate interactions between macOS Reminders and Org mode. The plugin allows you to manage reminders stored in macOS Reminders from within Org mode, providing a seamless experience for users who rely on both systems.
 
+This project depends on the [[https://github.com/keith/reminders-cli][reminders-cli]] command-line tool, offering easy-to-use commands to interact with macOS Reminders.
+
 * Features
 
 - *Add Reminders*: Easily add new reminders to specific lists in macOS Reminders.
@@ -59,6 +61,8 @@ Add the following line to your Emacs configuration file (e.g., `.emacs` or `init
 
 * Usage
 ** Global
+*** A Transient Prefix
+- *org-reminders-prefix* : A transient prefix for multiple org-reminders commands.
 *** Viewing Reminders in Org manner
 To view your reminders, run the =org-reminders= command:
 

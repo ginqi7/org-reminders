@@ -2,6 +2,8 @@
 
 org-reminders 是一个 Emacs 插件，旨在促进 macOS Reminders（提醒事项）和 Org mode 之间的交互。该插件允许您在 Org mode 中管理存储在 macOS Reminders 中的提醒事项，为依赖这两个系统的用户提供无缝体验。
 
+这个项目依赖于 [[https://github.com/keith/reminders-cli][reminders-cli]] 命令行工具，它提供了便捷的命令去操控 macOS Reminders（提醒事项）。
+
 * 功能
 - 添加提醒事项：轻松地将新的提醒事项添加到 macOS Reminders 中的特定列表。
 - 编辑提醒事项：更新现有提醒事项的标题、备注
@@ -50,6 +52,9 @@ git clone git@github.com:ginqi7/org-reminders.git ~/.emacs.d/lisp/org-reminders
 
 * 用法
 ** 全局命令
+*** A Transient Prefix
+- *org-reminders-prefix* : 定义了一个 transient-prefix，可以快速的访问多个 org-reminders 命令
+
 *** 查看提醒事项
 
 要查看您的提醒事项，运行 =org-reminders= 命令：
