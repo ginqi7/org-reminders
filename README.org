@@ -91,13 +91,6 @@ This command requires input: ~list-name~, ~title~, and optionally, ~priority~ an
 *** Synchronizing Element at pointer
 - *org-reminders-sync-element-at-pointer* : Synchronization of the element at point with the Reminders app.
 
-** Key Functions
-
-- `org-reminders`: Displays reminders.
-- `org-reminders-sync`: Syncs the current element.
-- `org-reminders-insert-list`: Inserts a reminder list.
-- `org-reminders-insert-reminder`: Inserts a reminder.
-
 * Known Issues
 - Completed reminders cannot be deleted.
 - The CLI and app display inconsistent times in CST Zonetime.
