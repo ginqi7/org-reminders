@@ -1,0 +1,93 @@
+#+TITLE: org-reminders
+
+org-reminders 是一个 Emacs 插件，旨在促进 macOS Reminders（提醒事项）和 Org mode 之间的交互。该插件允许您在 Org mode 中管理存储在 macOS Reminders 中的提醒事项，为依赖这两个系统的用户提供无缝体验。
+
+* 功能
+- 添加提醒事项：轻松地将新的提醒事项添加到 macOS Reminders 中的特定列表。
+- 编辑提醒事项：更新现有提醒事项的标题、备注
+- 完成和取消完成提醒事项：切换提醒事项的完成状态。
+- 删除提醒事项：从列表中删除提醒事项。
+- 显示提醒事项：使用 Org mode 结构以有组织的方式呈现提醒事项。
+- 同步功能：在 macOS Reminders 和 Org mode 之间同步提醒事项。
+
+[[file:examples/example.webm]]
+
+* 前提条件
+- [[https://github.com/keith/reminders-cli][reminders-cli]]：一个用于与 macOS 提醒事项交互的简单 CLI（命令行界面）工具。
+* 安装
+** reminders-cli
+#+begin_src shell
+brew install keith/formulae/reminders-cli
+#+end_src
+
+** 授予提醒事项访问权限
+当您遇到错误：
+#+begin_quote
+"error: you need to grant reminders access\n"
+#+end_quote
+在 Eshell 中运行以下命令将填充 Emacs 的权限。
+#+begin_src shell
+osascript -e 'tell application "Reminders" to show (first list whose name is "blabla")'
+#+end_src
+
+** 安装包
+
+- 将项目克隆到您自己的 Emacs 配置文件目录中，例如：
+#+begin_src shell
+git clone git@github.com:ginqi7/org-reminders.git ~/.emacs.d/lisp/org-reminders
+#+end_src
+
+- 将路径添加到 ‘load-path’：
+#+begin_src shell
+(add-to-list 'load-path (expand-file-name "~/.emacs.d/lisp/org-reminders"))
+#+end_src
+
+* 配置
+将以下行添加到您的 Emacs 配置文件（例如，.emacs 或 init.el）：
+#+begin_src emacs-lisp
+(require 'org-reminders)
+#+end_src
+
+* 用法
+** 全局命令
+*** 查看提醒事项
+
+要查看您的提醒事项，运行 =org-reminders= 命令：
+
+此命令将切换到名为 =*reminders*= 的缓冲区，并显示按列表组织的所有提醒事项。
+
+*** 添加提醒事项列表
+
+要添加提醒事项列表，运行 =org-reminders-add-list= 命令：
+
+此命令需要输入： =list-name= 。
+
+*** 添加提醒事项
+
+要添加提醒事项，运行 =org-reminders-add-reminder= 命令：
+
+此命令需要输入： =list-name= 、 =title= ，以及可选的 =priority= 和 =notes= 。
+
+*** 删除提醒事项
+
+要删除提醒事项，运行 =org-reminders-add-reminder= 命令：
+
+此命令需要输入： =list-name= 、 =title= ，以及可选的 =priority= 和 =notes= 。
+
+** 在 Org mode 文件中
+*** 同步缓冲区
+
+=org-reminders-sync-buffer= ：缓冲区元素和 Reminders 应用之间的同步。
+
+*** 删除指针处的元素
+=org-reminders-delete-element-at-pointer= ：删除指针处的元素。
+
+*** 同步指针处的元素
+=org-reminders-sync-element-at-pointer= ：指针处的元素与 Reminders 应用的同步。
+
+
+* 已知问题
+- 无法删除已完成的提醒事项。
+- 在 CST 时区，CLI 和应用显示的时间不一致。
+* 贡献
+欢迎贡献！请通过项目的存储库提交问题和拉取请求。

@@ -1,65 +1,95 @@
 #+TITLE: org-reminders
 
+#+HTML: <a href ="https://github.com/ginqi7/org-reminders/blob/master/README.zh-CN.org"><img src="https://img.shields.io/badge/README-%E7%AE%80%E4%BD%93%E4%B8%AD%E6%96%87-555555.svg"/></a>
+
 org-reminders is an Emacs plugin designed to facilitate interactions between macOS Reminders and Org mode. The plugin allows you to manage reminders stored in macOS Reminders from within Org mode, providing a seamless experience for users who rely on both systems.
 
 * Features
 
-- **Add Reminders**: Easily add new reminders to specific lists in macOS Reminders.
-- **Edit Reminders**: Update the title, notes, and priority of existing reminders.
-- **Complete and Uncomplete Reminders**: Toggle the completion status of your reminders.
-- **Delete Reminders**: Remove reminders from your lists.
-- **Display Reminders**: Render reminders in an organized manner using Org mode structure.
-- **Sync Functionality**: Synchronize reminders between macOS Reminders and Org mode.
+- *Add Reminders*: Easily add new reminders to specific lists in macOS Reminders.
+- *Edit Reminders*: Update the title, notes of existing reminders.
+- *Complete and Uncomplete Reminders*: Toggle the completion status of your reminders.
+- *Delete Reminders*: Remove reminders from your lists.
+- *Display Reminders*: Render reminders in an organized manner using Org mode structure.
+- *Sync Functionality*: Synchronize reminders between macOS Reminders and Org mode.
+
+[[file:examples/example.webm]]
+
+* Prerequisites
+
+- *[[https://github.com/keith/reminders-cli][reminders-cli]]* : A simple CLI for interacting with macOS reminders
 
 * Installation
 
-To install `org-reminders`, follow these steps:
+** reminders-cli
+#+begin_src shell
+  brew install keith/formulae/reminders-cli
+#+end_src
 
-1. Download the `org-reminders.el` file.
-2. Place it in your Emacs load path.
-3. Add the following line to your Emacs configuration file (e.g., `.emacs` or `init.el`):
+* grant reminders access
+When you encounter an error :
 
-   ```elisp
-   (require 'org-reminders)
-   ```
+#+begin_quote
+"error: you need to grant reminders access\n"
+#+end_quote
+
+Running this command in Eshell will populate Emacs permissions.
+#+begin_src shell
+  osascript -e 'tell application "Reminders" to show (first list whose name is "blabla")'
+#+end_src
+
+** package
+
+- clone the project in your own emacs configuration files directory, like:
+#+begin_src shell
+  git clone git@github.com:ginqi7/org-reminders.git ~/.emacs.d/lisp/org-reminders
+#+end_src
+
+- add the path to ‘load-path’
+#+begin_src shell
+(add-to-list 'load-path (expand-file-name "~/.emacs.d/lisp/d/lisp/org-reminders"))
+#+end_src
+
+* Configuration
+Add the following line to your Emacs configuration file (e.g., `.emacs` or `init.el`):
+
+#+begin_src emacs-lisp
+  (require 'org-reminders)
+#+end_src
 
 * Usage
-
-** Viewing Reminders
-
-To view your reminders, run the following command:
-
-```elisp
-M-x org-reminders
-```
+** Global
+*** Viewing Reminders in Org manner
+To view your reminders, run the =org-reminders= command:
 
 This command will switch to a buffer named `*reminders*` and display all your reminders organized by lists.
 
-** Adding a Reminder
+*** Adding a Reminder List
 
-To add a reminder, create a new Org heading under the desired list and include the relevant properties such as title, notes, and priority. Then call the sync command:
+To add a Reminder List, run the =org-reminders-add-list= command:
 
-```elisp
-M-x org-reminders-sync
-```
+This command requires input: ~list-name~.
 
-** Editing a Reminder
+*** Adding a Reminder
 
-Navigate to the reminder you want to edit in the `*reminders*` buffer and modify its heading or properties. After editing, call:
+To add a Reminder, run the ~org-reminders-add-reminder~ command:
 
-```elisp
-M-x org-reminders-sync
-```
+This command requires input: ~list-name~, ~title~, and optionally, ~priority~ and ~notes~.
 
-This will update the reminder in macOS Reminders.
+*** Delete a Reminder
 
-** Syncing Reminders
+To add a Reminder, run the ~org-reminders-add-reminder~ command:
 
-For the latest changes or to ensure everything is up-to-date, you can sync all reminders by invoking:
+This command requires input: ~list-name~, ~title~, and optionally, ~priority~ and ~notes~.
 
-```elisp
-M-x org-reminders-sync
-```
+
+** In a Org mode file
+*** Synchronizing Buffer
+- *org-reminders-sync-buffer* : Synchronization between buffer elements and the Reminders app.
+*** Delete Element at pointer
+- *org-reminders-delete-element-at-pointer* : Delete the element at point.
+*** Synchronizing Element at pointer
+- *org-reminders-sync-element-at-pointer* : Synchronization of the element at point with the Reminders app.
 
 ** Key Functions
 
@@ -68,21 +98,10 @@ M-x org-reminders-sync
 - `org-reminders-insert-list`: Inserts a reminder list.
 - `org-reminders-insert-reminder`: Inserts a reminder.
 
+* Known Issues
+- Completed reminders cannot be deleted.
+- The CLI and app display inconsistent times in CST Zonetime.
+
 * Contributions
 
 Contributions are welcome! Please submit issues and pull requests through the project’s repository.
-
-* Acknowledgments
-
-- Inspired by the functionalities of org-mode and macOS Reminders.
-- Special thanks to the Emacs community for continuous support and improvements.
-
-For detailed documentation and further customization, you may want to explore the code comments within the `org-reminders.el` file. Happy organizing!
-
-* grant reminders access
-#+begin_src shell
-  osascript -e 'tell application "Reminders" to show (first list whose name is "blabla")'
-#+end_src
-run is in eshell, it will populate permission for Emacs
-
-"error: you need to grant reminders access\n"
