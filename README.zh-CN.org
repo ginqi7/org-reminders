@@ -10,7 +10,7 @@ org-reminders 是一个 Emacs 插件，旨在促进 macOS Reminders（提醒事�
 - 显示提醒事项：使用 Org mode 结构以有组织的方式呈现提醒事项。
 - 同步功能：在 macOS Reminders 和 Org mode 之间同步提醒事项。
 
-[[file:examples/example.webm]]
+[[https://github.com/user-attachments/assets/a15df8bd-0739-4a48-8739-4e3ceee64b0b]]
 
 * 前提条件
 - [[https://github.com/keith/reminders-cli][reminders-cli]]：一个用于与 macOS 提醒事项交互的简单 CLI（命令行界面）工具。

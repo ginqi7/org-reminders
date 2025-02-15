@@ -13,7 +13,7 @@ org-reminders is an Emacs plugin designed to facilitate interactions between mac
 - *Display Reminders*: Render reminders in an organized manner using Org mode structure.
 - *Sync Functionality*: Synchronize reminders between macOS Reminders and Org mode.
 
-[[file:examples/example.webm]]
+[[https://github.com/user-attachments/assets/a15df8bd-0739-4a48-8739-4e3ceee64b0b]]
 
 * Prerequisites
 
