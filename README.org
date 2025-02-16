@@ -97,7 +97,6 @@ This command requires input: ~list-name~, ~title~, and optionally, ~priority~ an
 
 * Known Issues
 - Completed reminders cannot be deleted.
-- The CLI and app display inconsistent times in CST Zonetime.
 
 * Contributions
 
