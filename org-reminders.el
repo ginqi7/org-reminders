@@ -75,12 +75,11 @@
     "\n:END:"
     "\n{:notes}"))
 
-(defun org-reminders--convert-date (date-str)
-  "Convert reminders DATE-STR to org date string."
-  (when date-str
-    (concat "["
-            (string-replace "Z" "" (string-replace "T" " " date-str))
-            "]")))
+(defun iso8601-to-current-timezone (iso8601-time)
+  "Convert an ISO8601 time string to the current system timezone."
+  (when iso8601-time
+    (let ((time (date-to-time iso8601-time)))
+      (format-time-string "%Y-%m-%d %H:%M:%S" time))))
 
 (defun org-reminders--expand-str (template &rest args)
   "Expand template str by args."
@@ -397,7 +396,6 @@
                   (gethash "list" (cdr element))
                   (gethash "externalId" (cdr element)))))))
 
-
 (defun org-reminders-delete-reminder (&optional list-name external-id)
   "Delete an reminder."
   (interactive)
@@ -429,7 +427,7 @@
            org-reminders-org-template
            :state (if (gethash "isCompleted" reminder) "DONE" "TODO")
            :title (gethash "title" reminder)
-           :date (org-reminders--convert-date (gethash "completionDate" reminder))
+           :date (iso8601-to-current-timezone (gethash "completionDate" reminder))
            :external-id  (gethash "externalId" reminder)
            :priority (if (org-reminders--toggle-priority-type
                           (gethash "priority" reminder))
