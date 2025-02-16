@@ -25,6 +25,7 @@
 ;;; Code:
 
 (require 'org)
+(require 'cl-seq)
 
 (defvar org-reminders--buffer-name "*reminders*")
 
