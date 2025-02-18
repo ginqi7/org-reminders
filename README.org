@@ -59,6 +59,12 @@ Add the following line to your Emacs configuration file (e.g., `.emacs` or `init
   (require 'org-reminders)
 #+end_src
 
+* Variables
+| variable                        | description               | default-value |
+|---------------------------------+---------------------------+---------------|
+| org-reminders-include-completed | Show completed reminders? | t             |
+
+
 * Usage
 ** Global
 *** A Transient Prefix

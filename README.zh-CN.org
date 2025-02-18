@@ -50,6 +50,11 @@ git clone git@github.com:ginqi7/org-reminders.git ~/.emacs.d/lisp/org-reminders
 (require 'org-reminders)
 #+end_src
 
+* 变量
+| 变量                            | 描述                      | 默认值 |
+|---------------------------------+---------------------------+--------|
+| org-reminders-include-completed | Show completed reminders? | t      |
+
 * 用法
 ** 全局命令
 *** A Transient Prefix
@@ -93,6 +98,6 @@ git clone git@github.com:ginqi7/org-reminders.git ~/.emacs.d/lisp/org-reminders
 
 * 已知问题
 - 无法删除已完成的提醒事项。
-  
+
 * 贡献
 欢迎贡献！请通过项目的存储库提交问题和拉取请求。

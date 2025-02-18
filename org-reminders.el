@@ -27,6 +27,9 @@
 (require 'org)
 (require 'cl-seq)
 
+(defcustom org-reminders-include-completed t
+  "Show completed reminders?")
+
 (defvar org-reminders--buffer-name "*reminders*")
 
 (defvar org-reminders--groups nil)
@@ -63,8 +66,12 @@
    :delete '("reminders delete '{:list-name}' '{:external-id}'")
    :edit '("reminders edit '{:list-name}' '{:external-id}' '{:title}'"
            " --notes '{:notes}'")
-   :show '("reminders show '{:list-name}' --include-completed -f json")
-   :show-all '("reminders show-all --include-completed -f json")
+   :show '("reminders show '{:list-name}'"
+           "--include-completed'{:include-completed}'"
+           " -f json")
+   :show-all '("reminders show-all"
+               " --include-completed'{:include-completed}'"
+               " -f json")
    :show-lists '("reminders show-lists -f json")
    :new-list '("reminders new-list '{:list-name}'")))
 
@@ -283,6 +290,8 @@
 (defun org-reminders--get-reminder-in-list (list-name)
   "Get items in list by LIST-NAME."
   (org-reminders-run-command :show
+                             :include-completed
+                             (if org-reminders-include-completed "")
                              :list-name list-name
                              :parse-json t))
 
@@ -298,7 +307,10 @@
   (setq org-reminders--groups (make-hash-table :test #'equal))
   (dolist (list-name org-reminders--lists)
     (puthash list-name (make-hash-table :test #'equal) org-reminders--groups))
-  (dolist (reminder (org-reminders-run-command :show-all :parse-json t))
+  (dolist (reminder (org-reminders-run-command :show-all
+                                               :include-completed
+                                               (if org-reminders-include-completed "")
+                                               :parse-json t))
     (let* ((external-id (gethash "externalId" reminder))
            (list-name  (gethash "list" reminder))
            (reminders (gethash list-name org-reminders--groups)))
