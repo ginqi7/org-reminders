@@ -28,6 +28,11 @@
 (require 'org-reminders-model)
 (require 'org-reminders-utils)
 
+(defcustom org-reminders-org-sync-file (file-name-concat
+                                        user-emacs-directory
+                                        "Reminders.org")
+  "The org file.")
+
 (defvar org-reminders-org-dao--list-names nil)
 (defvar org-reminders-org-dao--items nil)
 (defvar org-reminders-org-dao--items-hashtable nil)
@@ -70,7 +75,6 @@
     :set-hash
     :set-schedule
     :add-notes))
-
 
 
 (defun org-reminders-org-dao--run-command (key model)
@@ -130,10 +134,11 @@
   (org-reminders-with-model-fields
    model
    (when notes
+     (org-narrow-to-subtree)
      (org-end-of-meta-data)
-     (insert notes))))
-
-
+     (insert notes)
+     (delete-region (point) (point-max))
+     (widen))))
 
 (defun org-reminders-org-dao-edit-item (model)
   (org-reminders-with-model-fields
@@ -270,10 +275,12 @@
                     (org-reminders-org-dao--get-content headline))
         (eieio-oset reminders-mode-item 'hash hash)
         (eieio-oset reminders-mode-item 'due-date due-date)
+        (org-reminders-model-check-hash reminders-mode-item)
+        (unless (equal hash (org-reminders-model-hash reminders-mode-item))
+          (org-reminders-org-dao-edit reminders-mode-item))
         (setq org-reminders-org-dao--items
               (append org-reminders-org-dao--items
-                      (list (org-reminders-model-check-hash
-                             reminders-mode-item))))))
+                      (list reminders-mode-item)))))
     org-reminders-org-dao--items))
 
 (defun org-reminders-org-dao-all-elements ()
@@ -301,7 +308,8 @@
      (save-excursion
        (goto-char (point-min))
        ,@body
-       (org-update-statistics-cookies t))))
+       (org-reminders-mode))))
+;; (org-update-statistics-cookies t))))
 
 
 (defun org-reminders-org-dao-add-item (model)

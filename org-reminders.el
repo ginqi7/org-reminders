@@ -28,10 +28,7 @@
 (require 'cl-seq)
 (require 'org-reminders-dao)
 
-(defcustom org-reminders-org-sync-file (file-name-concat
-                                        user-emacs-directory
-                                        "Reminders.org")
-  "The org file.")
+
 
 (defun org-reminders-sync ()
   "Synchronize Reminders with Org files."
@@ -116,6 +113,19 @@
           (setq cli-model (org-reminders-dao-edit 'cli org-model))))
       (eieio-oset cli-model 'id id)
       (org-reminders-dao-edit 'org cli-model))))
+
+(define-derived-mode org-reminders-mode org-mode "Org-Reminders"
+  "Major mode for managing reminders in Org mode."
+  ;; (org-fold-hide-sublevels 1)
+  (org-update-statistics-cookies t)
+  (if (equal major-mode 'org-reminders-mode)
+      (add-hook 'after-save-hook #'org-reminders-after-save-hook)
+    (remove-hook 'after-save-hook #'org-reminders-after-save-hook)))
+
+(defun org-reminders-after-save-hook ()
+  ;; (when (string= org-reminders-org-sync-file (buffer-file-name))
+  (when (equal major-mode 'org-reminders-mode)
+    (org-reminders-dao-all-elements 'org)))
 
 (provide 'org-reminders)
 ;;; org-reminders.el ends here

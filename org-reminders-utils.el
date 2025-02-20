@@ -99,7 +99,21 @@
 
 
 (defun org-reminders--md5 (obj)
-  (md5 (format "%s" obj)))
+  (let ((contains-attributes
+         '(title
+           priority
+           list-name
+           completed
+           external-id
+           due-date notes)))
+    (md5
+     (format
+      "%s"
+      (mapcar
+       (lambda (key)
+         (eieio-oref obj key))
+       contains-attributes)))))
+
 
 (defun org-reminders--priority-convert (in-type out-type priority)
   (let ((priorities '((nil 0 nil)
