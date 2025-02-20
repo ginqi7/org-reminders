@@ -28,19 +28,31 @@
 
 (defvar org-reminders-cli-dao--list-names nil)
 (defvar org-reminders-cli-dao--items nil)
+(defvar org-reminders-cli-dao--items-hashtable nil)
 
+
+(defun org-reminders-cli-dao--build-items-hashtable ()
+  (setq org-reminders-cli-dao--items-hashtable
+        (org-reminders--build-items-hashtable org-reminders-cli-dao--items)))
+
+(defun org-reminders-cli-dao-get (external-id)
+  (gethash external-id org-reminders-cli-dao--items-hashtable))
 
 (defvar org-reminders-cli-dao--commands
   (list
    :add '("reminders add '{:list-name}' '{:title}'"
           " --due-date '{:due-date}'"
           " --priority '{:priority}'"
-          " --notes '{:notes}'")
-   :complete '("reminders complete '{:list-name}' '{:external-id}'")
-   :uncomplete '("reminders uncomplete '{:list-name}' '{:external-id}'")
+          " --notes '{:notes}'"
+          " --url '{:url}'"
+          " --format json")
+   :complete '("reminders complete '{:list-name}' '{:external-id}' --format json")
+   :uncomplete '("reminders uncomplete '{:list-name}' '{:external-id}' --format json")
    :delete '("reminders delete '{:list-name}' '{:external-id}'")
    :edit '("reminders edit '{:list-name}' '{:external-id}' '{:title}'"
-           " --notes '{:notes}'")
+           " --notes '{:notes}'"
+           " --url '{:url}'"
+           " --format json")
    :show '("reminders show '{:list-name}' --include-completed -f json")
    :show-all '("reminders show-all --include-completed -f json")
    :show-lists '("reminders show-lists -f json")
@@ -69,7 +81,8 @@
 (defun org-reminders-cli-dao-all-elements ()
   "Refresh list names data."
   (org-reminders-cli-dao-all-list-names)
-  (org-reminders-cli-dao-all-items))
+  (org-reminders-cli-dao-all-items)
+  (org-reminders-cli-dao--build-items-hashtable))
 
 
 (defun org-reminders-cli-dao-add-list (list-name)
@@ -79,33 +92,42 @@
 
 (defun org-reminders-cli-dao-add-item (model)
   "Refresh list names data."
-  (org-reminders-cli-dao--run-command
-   :add
-   (org-reminders-model-to-plist model)))
+  (org-reminders-model-parse-json-str
+   (apply #'org-reminders-cli-dao--run-command
+          :add
+          (org-reminders-model-to-plist model))))
 
 (defun org-reminders-cli-dao-complete (model)
   "Refresh list names data."
-  (org-reminders-cli-dao--run-command
-   :complete
-   (org-reminders-model-to-plist model)))
+  (org-reminders-model-parse-json-str
+   (apply #'org-reminders-cli-dao--run-command
+          :complete
+          (org-reminders-model-to-plist model))))
+
+(defun org-reminders-cli-dao-toggle-completed (model)
+  (if (org-reminders-model-completed model)
+      (org-reminders-cli-dao-uncomplete model)
+    (org-reminders-cli-dao-complete model)))
 
 (defun org-reminders-cli-dao-uncomplete (model)
   "Refresh list names data."
-  (org-reminders-cli-dao--run-command
-   :uncomplete
-   (org-reminders-model-to-plist model)))
+  (org-reminders-model-parse-json-str
+   (apply #'org-reminders-cli-dao--run-command
+          :uncomplete
+          (org-reminders-model-to-plist model))))
 
 (defun org-reminders-cli-dao-delete (model)
   "Refresh list names data."
-  (org-reminders-cli-dao--run-command
-   :delete
-   (org-reminders-model-to-plist model)))
+  (apply #'org-reminders-cli-dao--run-command
+         :delete
+         (org-reminders-model-to-plist model)))
 
 (defun org-reminders-cli-dao-edit (model)
   "Refresh list names data."
-  (org-reminders-cli-dao--run-command
-   :delete
-   (org-reminders-model-to-plist model)))
+  (org-reminders-model-parse-json-str
+   (apply #'org-reminders-cli-dao--run-command
+          :edit
+          (org-reminders-model-to-plist model))))
 
 (provide 'org-reminders-cli-dao)
 ;;; org-reminders-cli-dao.el ends here

@@ -35,7 +35,12 @@
   completed
   external-id
   completion-date
-  notes)
+  due-date
+  last-modified
+  notes
+  hash
+  deleted)
+
 
 (defvar org-reminders-model-keyword-mapping
   '((id . "id")
@@ -44,13 +49,32 @@
     (list-name . "list")
     (completed . "isCompleted")
     (external-id . "externalId")
-    (completion-date . "completionDate")))
+    (completion-date . "completionDate")
+    (due-date . "dueDate")
+    (last-modified . "lastModified")
+    (notes . "notes")))
 
-(defun org-reminders-model-parse-json-str (json-str)
-  (let ((json-obj (json-parse-string json-str
-                                     :array-type 'list
-                                     :false-object nil)))
-    (org-reminders-model-parse-json-obj json-obj)))
+
+(defun org-reminders-model-check-hash (model)
+  (let ((old-hash (org-reminders-model-hash model))
+        (id (org-reminders-model-id model))
+        (new-hash))
+    ;; The ID and HASH is not in Reminders.
+    (eieio-oset model 'hash nil)
+    (eieio-oset model 'id nil)
+    (setq new-hash (org-reminders--md5 model))
+    (eieio-oset model 'hash new-hash)
+    (eieio-oset model 'id id)
+    (unless (equal old-hash new-hash)
+      (eieio-oset model 'last-modified (org-reminders--current-time-utc)))
+    model))
+
+(defun org-reminders-model-parse-hash-table (htable)
+  (let ((item (make-org-reminders-model)))
+    (dolist (pair org-reminders-model-keyword-mapping)
+      (eieio-oset item (car pair) (gethash (cdr pair) htable)))
+    (eieio-oset item 'hash (org-reminders--md5 item))
+    item))
 
 (defun org-reminders-model-parse-json-obj (json-obj)
   (pcase (type-of json-obj)
@@ -58,27 +82,31 @@
     ('hash-table (org-reminders-model-parse-hash-table json-obj))
     ('string json-obj)))
 
-(defun org-reminders-model-parse-hash-table (htable)
-  (let ((item (make-org-reminders-model)))
-    (dolist (pair org-reminders-model-keyword-mapping)
-      (eieio-oset item (car pair) (gethash (cdr pair) htable)))
-    item))
-
+(defun org-reminders-model-parse-json-str (json-str)
+  (let ((json-obj (json-parse-string json-str
+                                     :array-type 'list
+                                     :false-object nil)))
+    (org-reminders-model-parse-json-obj json-obj)))
 
 (defun org-reminders-model-to-plist (obj)
   (let* ((slots (cl-struct-slot-info 'org-reminders-model))
-         (properties (mapcar #'car (cdr slots))))
-    (mapcan
-     (lambda (property)
-       (when (eieio-oref obj property)
-         (list (intern (format ":%s" property))
-               (eieio-oref obj property))))
-     properties)))
+         (properties (mapcar #'car (cdr slots)))
+         (property-list))
+    (setq property-list
+          (mapcan
+           (lambda (property)
+             (when (eieio-oref obj property)
+               (list (intern (format ":%s" property))
+                     (eieio-oref obj property))))
+           properties))
+    (plist-put
+     property-list
+     :priority
+     (org-reminders--priority-convert
+      'model
+      'cli
+      (plist-get property-list :priority)))))
 
-
-(org-reminders-model-to-plist (make-org-reminders-model
-                               :id 100
-                               :external-id 10))
 
 (provide 'org-reminders-model)
 ;;; org-reminders-model.el ends here
