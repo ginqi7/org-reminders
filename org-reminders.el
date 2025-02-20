@@ -26,6 +26,7 @@
 
 (require 'org)
 (require 'cl-seq)
+(require 'transient)
 
 (defcustom org-reminders-include-completed t
   "Show completed reminders?")
@@ -127,7 +128,7 @@
                 output-index 1)
         (setq input-index 1
               output-index 2))
-      (nth output-index (find-if (lambda (item) (equal priority (nth input-index item))) org-reminders--priorities)))))
+      (nth output-index (cl-find-if (lambda (item) (equal priority (nth input-index item))) org-reminders--priorities)))))
 
 (defun org-reminders--insert-list (list-name)
   "Insert List."
@@ -185,8 +186,8 @@
 
     (setq priority
           (car
-           (find-if (lambda (item) (equal priority (nth 2 item)))
-                    org-reminders--priorities)))
+           (cl-find-if (lambda (item) (equal priority (nth 2 item)))
+                       org-reminders--priorities)))
     (org-reminders-add-reminder
      :list-name list-name
      :title title
