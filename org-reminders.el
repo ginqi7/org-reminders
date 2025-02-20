@@ -26,17 +26,7 @@
 
 (require 'org)
 (require 'cl-seq)
-(require 'org-reminders-cli-dao)
-(require 'org-reminders-org-dao)
-
-
-(defvar org-reminders--match-items nil)
-
-(defvar org-reminders--new-reminders nil)
-
-(defvar org-reminders--deleted-reminders nil)
-
-(defvar org-reminders--deleted-todos nil)
+(require 'org-reminders-dao)
 
 (defcustom org-reminders-org-sync-file (file-name-concat
                                         user-emacs-directory
@@ -44,34 +34,37 @@
   "The org file.")
 
 (defun org-reminders-sync ()
+  "Synchronize Reminders with Org files."
   (interactive)
-  (org-reminders-org-dao-all-elements)
-  (org-reminders-cli-dao-all-elements)
-  (org-reminders--sync-list-names
-   org-reminders-cli-dao--list-names
-   org-reminders-org-dao--list-names)
-  (org-reminders--sync-items
-   org-reminders-cli-dao--items
-   org-reminders-org-dao--items))
+  (org-reminders-dao-all-elements 'cli)
+  (org-reminders-dao-all-elements 'org)
+  (org-reminders-sync-list-names
+   (org-reminders-dao-list-names 'cli)
+   (org-reminders-dao-list-names 'org))
+  (org-reminders-sync-items
+   (org-reminders-dao-items 'cli)
+   (org-reminders-dao-items 'org)))
 
 
-(defun org-reminders--sync-list-names (cli-list-names org-list-names)
+(defun org-reminders-sync-list-names (cli-list-names org-list-names)
+  "Synchronize Reminders list names with Org files."
   (dolist (list-name (append cli-list-names org-list-names))
     (unless (member list-name cli-list-names)
-      (org-reminders-cli-dao-add-list list-name))
+      (org-reminders-dao-add-list 'cli list-name))
     (unless (member list-name org-list-names)
-      (org-reminders-org-dao-add-list list-name))))
+      (org-reminders-dao-add-list 'org list-name))))
 
-(defun org-reminders--sync-items (cli-models org-models)
+(defun org-reminders-sync-items (cli-models org-models)
+  "Synchronize Reminders items with Org files."
   ;; Iterate through all Reminders.
   (dolist (cli-model cli-models)
     (let* ((external-id (org-reminders-model-external-id cli-model))
            (org-model (org-reminders-org-dao-get external-id)))
       (if org-model
           ;; If the external ID matches, synchronize the item in both Reminders and Org mode.
-          (org-reminders--sync-item cli-model org-model)
+          (org-reminders-sync-item cli-model org-model)
         ;; otherwise, add the item to Org mode.
-        (org-reminders-org-dao-add-item cli-model))))
+        (org-reminders-dao-add-item 'org cli-model))))
 
   ;; Iterate through all org mode todos.
   (dolist (org-model org-models)
@@ -82,18 +75,19 @@
       (if (not external-id)
           ;; No external ID found in Org item; adding to Reminders.
           (progn
-            (setq new-model (org-reminders-cli-dao-add-item org-model))
+            (setq new-model (org-reminders-dao-add-item 'cli org-model))
             (eieio-oset new-model 'id id)
-            (org-reminders-org-dao-edit
-             new-model))
+            (org-reminders-dao-edit 'org
+                                    new-model))
         (unless cli-model
           ;; 1. External ID found in Org item.
           ;; 2. No matching item found in Reminders,
           ;; which indicates that the item may have been deleted.
           ;; Delete the item in the org mode file.
-          (org-reminders-org-dao-delete org-model))))))
+          (org-reminders-dao-delete 'org org-model))))))
 
-(defun org-reminders--sync-item (cli-model org-model)
+(defun org-reminders-sync-item (cli-model org-model)
+  "Synchronize Reminders an item with Org files."
   (let ((deleted (org-reminders-model-deleted org-model))
         (id (org-reminders-model-id org-model))
         (cli-hash (org-reminders-model-hash cli-model))
@@ -111,17 +105,17 @@
     ;; When an org mode todo is manually marked DELETED,
     ;; delete the corresponding Reminders item.
     (when deleted
-      (org-reminders-cli-dao-delete cli-model)
-      (org-reminders-org-dao-delete org-model))
+      (org-reminders-dao-delete 'cli cli-model)
+      (org-reminders-dao-delete 'org org-model))
     (unless (equal cli-hash org-hash)
       (unless (string> cli-last-modified org-last-modified)
         (unless (equal cli-completed org-completed)
-          (setq cli-model (org-reminders-cli-dao-toggle-completed cli-model)))
+          (setq cli-model (org-reminders-dao-toggle-completed 'cli cli-model)))
         (unless (and (equal cli-title org-title)
                      (equal cli-notes org-notes))
-          (setq cli-model (org-reminders-cli-dao-edit org-model))))
+          (setq cli-model (org-reminders-dao-edit 'cli org-model))))
       (eieio-oset cli-model 'id id)
-      (org-reminders-org-dao-edit cli-model))))
+      (org-reminders-dao-edit 'org cli-model))))
 
 (provide 'org-reminders)
 ;;; org-reminders.el ends here
