@@ -3,7 +3,7 @@
 ;; Copyright (C) 2025  Qiqi Jin
 
 ;; Author: Qiqi Jin <ginqi7@gmail.com>
-;; Keywords:
+;; Keywords: org, reminders, macOS
 
 ;; This program is free software; you can redistribute it and/or modify
 ;; it under the terms of the GNU General Public License as published by
@@ -20,14 +20,16 @@
 
 ;;; Commentary:
 
-;;
+;; This package provides integration between macOS Reminders and Org mode.
 
 ;;; Code:
 
 (require 'org)
 (require 'cl-seq)
+(require 'json)
 (require 'transient)
 
+;; Structures
 (cl-defstruct org-reminders-item
   title
   external-id
@@ -53,39 +55,44 @@
   id
   data)
 
+;; Macros
 (defmacro org-reminders-with-subtree (&rest body)
+  "Run BODY in current subtree."
   `(progn
      (org-narrow-to-subtree)
      ,@body
      (widen)))
 
 (defmacro org-reminders-with-sync-file (&rest body)
+  "Run BODY in org-reminders-sync-file."
   `(with-current-buffer (find-file-noselect ,org-reminders-sync-file)
      (save-excursion
        (goto-char (point-min))
        ,@body
        (save-buffer))))
 
+;; Custom Variables
 (defcustom org-reminders-cli-command (executable-find "org-reminders")
-  "")
+  "The path of org-reminders cli.")
 
 (defcustom org-reminders-include-completed t
   "Show completed reminders?")
 
 (defcustom org-reminders-sync-file (expand-file-name "~/.emacs.d/Reminders.org")
-  "")
+  "The path of sync file.")
 
-(defvar org-reminders--buffer-name "*reminders*")
+(defcustom org-reminders-sync-frequency 2
+  "Synchronization frequency indicates how many times files are saved before synchronizing.")
 
-(defvar org-reminders--cli-process nil)
+;; Internal Variables
+(defvar org-reminders--cli-process nil
+  "The org-reminders-cli-process.")
 
-(defvar org-reminders--cli-process-buffer "*org-reminders-cli*")
+(defvar org-reminders--cli-process-buffer "*org-reminders-cli*"
+  "The org-reminders-cli-process buffer.")
 
-(defvar org-reminders--groups nil)
-
-(defvar org-reminders--lists nil)
-
-(defvar org-reminders--log-str-buffer nil)
+(defvar org-reminders--log-string nil
+  "The waited to process the log string.")
 
 (defvar org-reminders--priorities
   '((low ?C 9)
@@ -98,31 +105,82 @@
     "lastModified" last-modified
     "dueDate" scheduled
     "list" org-list
-    "completionDate" closed))
+    "completionDate" closed)
+  "The keymaps for converting JSON keys to struct fields.")
+
+(defun org-reminders--run-cil (type)
+  "Run org-reminders cli."
+  (start-process "org-reminders-cli"
+                 org-reminders--cli-process-buffer
+                 org-reminders-cli-command
+                 "sync"
+                 org-reminders-sync-file
+                 "-t"
+                 type))
+;; (when org-reminders-include-completed
+;;   "--include-completed")
+
+
 
 (defun org-reminders-handle-list (action data)
+  "Handle Reminders List by ACTION and DATA."
   (let ((obj (org-reminders-parse-list-data data)))
     (funcall (intern (format "org-reminders--list-%s" (downcase action))) obj)))
 
 (defun org-reminders-parse-item-data (data)
+  "Handle Reminders Item by DATA."
   (let* ((obj (org-reminders-parse-data data #'make-org-reminders-item))
          (json (json-encode (eieio-oref obj 'org-list))))
     (eieio-oset obj 'org-list (org-reminders-parse-list-data json))
     obj))
 
+(defun org-reminders--log-append (str)
+  "Append STR to log."
+  (setq org-reminders--log-string (concat org-reminders--log-string str)))
+
+(defun org-reminders--log-pop ()
+  "Pop macthed log"
+  (let ((matched-log (org-reminders--parse-log org-reminders--log-string)))
+    (when matched-log
+      (setq org-reminders--log-string
+            (substring org-reminders--log-string
+                       (car matched-log)))
+      matched-log)))
+
+
 (defun org-reminders--filter (process output)
-  (setq org-reminders--log-str-buffer (concat org-reminders--log-str-buffer output))
-  (let ((match-log (org-reminders--parse-log org-reminders--log-str-buffer)))
-    (while match-log
-      (org-reminders-reaction (cdr match-log))
-      (setq org-reminders--log-str-buffer (substring org-reminders--log-str-buffer
-                                                     (car match-log)))
-      (setq match-log (org-reminders--parse-log org-reminders--log-str-buffer))))
+  "org-reminders-cli output filter."
+  (setq org-reminders--log-string (concat org-reminders--log-string output))
+  ;; Since the logs may not be printed in complete lines, they need to be saved first and then parsed gradually.
+  (org-reminders--log-append output)
+  (while-let ((matched-log (org-reminders--log-pop)))
+    (org-reminders-reaction (cdr matched-log)))
   (with-current-buffer (process-buffer process)
     (goto-char (point-max))
     (insert output)))
 
 (defun org-reminders--item-update-detail (obj)
+  "Update a Reminders item in the sync file with details from OBJ.
+
+This function updates the properties and content of a Reminders item in the Org
+mode sync file based on the data provided in the OBJ structure.
+
+Parameters:
+- OBJ: A structure or object containing the details of the Reminders item.
+
+Steps:
+1. Extract the following properties from OBJ:
+   - HASH: A unique identifier for the item.
+   - TITLE: The title or headline of the item.
+   - NOTES: Additional notes or description of the item.
+   - LAST-MODIFIED: Timestamp of the last modification.
+   - EXTERNAL-ID: An external identifier for the item.
+   - CLOSED: Timestamp when the item was closed.
+   - SCHEDULED: Timestamp for the scheduled date.
+   - COMPLETED: A boolean indicating whether the item is completed.
+2. Update the corresponding properties in the Org mode entry.
+3. Update the headline, planning info, and notes as needed.
+4. Set the TODO state based on the completion status."
   (let ((hash (org-reminders-item-hash obj))
         (title (org-reminders-item-title obj))
         (notes (org-reminders-item-notes obj))
@@ -137,14 +195,20 @@
     (when title (org-edit-headline title))
     (when closed (org-add-planning-info 'closed closed))
     (when scheduled (org-add-planning-info 'scheduled scheduled))
-    (org-todo (if (equal :false completed) 'todo 'done))))
+    (org-todo (if (equal :false completed) 'todo 'done))
+    ;; Update the notes section if notes are provided
+    (when notes
+      (org-end-of-meta-data)
+      (replace-region-contents (point) (point-max) notes))))
 
 (defun org-reminders--insert-item-str (obj)
+  "Insert a new Reminders item into the current buffer based on the details in OBJ."
   (let((title (org-reminders-item-title obj)))
     (insert "\n** " title)
     (org-reminders--item-update-detail obj)))
 
 (defun org-reminders--item-add (obj)
+  "Add a new Reminders item to the appropriate list in the sync file."
   (let ((org-list (org-reminders-item-org-list obj)))
     (org-reminders-with-sync-file
      (when (org-reminders--list-locate-by-id org-list)
@@ -153,11 +217,13 @@
         (org-reminders--insert-item-str obj))))))
 
 (defun org-reminders--item-locate-by-id (obj)
+  "Locate a Reminders item in the current buffer by its external ID."
   (let ((id (org-reminders-item-external-id obj)))
     (goto-char (point-min))
     (search-forward-regexp (format ":EXTERNAL-ID:\s*%s" id) nil t)))
 
 (defun org-reminders--item-delete (obj)
+  "Delete a Reminders item from the sync file by its external ID."
   (org-reminders-with-sync-file
    (when (org-reminders--item-locate-by-id obj)
      (org-reminders-with-subtree
@@ -165,7 +231,7 @@
 
 (defun org-reminders--locate-headline-by-name-and-level (name level)
   "Locate an Org headline by NAME and LEVEL using org-element API.
-NAME is the headline's name, and LEVEL is its level (e.g., 1 for '*', 2 for '**', etc.)."
+  NAME is the headline's name, and LEVEL is its level (e.g., 1 for '*', 2 for '**', etc.)."
   (let ((tree (org-element-parse-buffer 'headline))
         found)
     (org-element-map tree 'headline
@@ -178,6 +244,7 @@ NAME is the headline's name, and LEVEL is its level (e.g., 1 for '*', 2 for '**'
         (goto-char (org-element-property :begin found)))))
 
 (defun org-reminders--item-locate-by-title (obj)
+  "Locate a Reminders item in the current buffer by its external title."
   (let ((title (org-reminders-item-title obj)))
     (goto-char (point-min))
     (print title)
@@ -185,6 +252,7 @@ NAME is the headline's name, and LEVEL is its level (e.g., 1 for '*', 2 for '**'
      title 2)))
 
 (defun org-reminders--item-update (obj)
+  "Update an existing Reminders item in the sync file."
   (org-reminders-with-sync-file
    (when (or (org-reminders--item-locate-by-id obj)
              (org-reminders--item-locate-by-title obj))
@@ -192,6 +260,7 @@ NAME is the headline's name, and LEVEL is its level (e.g., 1 for '*', 2 for '**'
       (org-reminders--item-update-detail obj)))))
 
 (defun org-reminders--list-add (obj)
+  "Add a new Reminders list to the sync file."
   (let ((id (org-reminders-list-id obj))
         (title (org-reminders-list-title obj)))
     (org-reminders-with-sync-file
@@ -200,23 +269,27 @@ NAME is the headline's name, and LEVEL is its level (e.g., 1 for '*', 2 for '**'
      (when id (org-set-property "LIST-ID" id)))))
 
 (defun org-reminders--list-locate-by-id (obj)
+  "Locate a Reminders List in the current buffer by its LIST ID."
   (let ((id (org-reminders-list-id obj)))
     (goto-char (point-min))
     (search-forward-regexp (format ":LIST-ID:\s*%s" id) nil t)))
 
 (defun org-reminders--list-delete (obj)
+  "Delete a Reminders list from the sync file by its list ID."
   (org-reminders-with-sync-file
    (when (org-reminders--list-locate-by-id obj)
      (org-reminders-with-subtree
       (delete-region (point-min) (point-max))))))
 
 (defun org-reminders--list-locate-by-title (obj)
+  "Locate a Reminders List in the current buffer by its LIST title."
   (let ((title (org-reminders-list-title obj)))
     (goto-char (point-min))
     (org-reminders--locate-headline-by-name-and-level
      title 1)))
 
 (defun org-reminders--list-update (obj)
+  "Update an existing Reminders List in the sync file."
   (let ((id (org-reminders-list-id obj))
         (title (org-reminders-list-title obj)))
     (org-reminders-with-sync-file
@@ -226,7 +299,40 @@ NAME is the headline's name, and LEVEL is its level (e.g., 1 for '*', 2 for '**'
         (when title (org-edit-headline (format "%s [0/0]" title)))
         (when id (org-set-property "LIST-ID" id)))))))
 
-(defun org-reminders--parse-log (output)
+(defun org-reminders--parse-log (log-string)
+  "Parse a log entry from the log-string string and extract its components.
+
+This function extracts structured data from a log entry string by matching a
+specific pattern. The log entry is expected to contain multiple fields enclosed
+in square brackets, including time, target, type, action, ID, and base64-encoded
+data. The extracted data is returned as a structured object.
+
+Parameters:
+- LOG: A string containing the log entry to be parsed.
+
+Steps:
+1. Use `string-match` to match the log entry pattern, which consists of six
+   fields enclosed in square brackets:
+   - Time
+   - Target
+   - Type
+   - Action
+   - ID
+   - Base64-encoded data
+2. If the pattern matches, extract each field using `match-string`.
+3. Decode the base64-encoded data using `base64-decode-string`.
+4. Construct a structured object using `make-org-reminders-log` with the extracted
+   fields.
+5. Return a cons cell where the car is the end position of the match and the cdr
+   is the structured log object.
+
+Returns:
+A cons cell where:
+- The car is the position in the log-string string after the matched log entry.
+- The cdr is a structured object containing the parsed log data.
+
+This function is typically used to process log entries during synchronization or
+debugging."
   (when (string-match (concat "\\[\\(.*?\\)\\]"
                               "\\[\\(.*?\\)\\]"
                               "\\[\\(.*?\\)\\]"
@@ -234,17 +340,44 @@ NAME is the headline's name, and LEVEL is its level (e.g., 1 for '*', 2 for '**'
                               "\\[\\(.*?\\)\\]"
                               "\\[\\(.*?\\)\\]\n")
 
-                      output)
+                      log-string)
     (cons (match-end 0)
           (make-org-reminders-log
-           :time (match-string 1 output)
-           :target (match-string 2 output)
-           :type (match-string 3 output)
-           :action (match-string 4 output)
-           :id (match-string 5 output)
-           :data (base64-decode-string (match-string 6 output))))))
+           :time (match-string 1 log-string)
+           :target (match-string 2 log-string)
+           :type (match-string 3 log-string)
+           :action (match-string 4 log-string)
+           :id (match-string 5 log-string)
+           :data (base64-decode-string (match-string 6 log-string))))))
 
 (defun org-reminders-parse-data (data type)
+  "Parse JSON data and map it to a structured object of the specified type.
+
+This function takes a JSON string and converts it into a structured object of the
+specified TYPE. The JSON keys are mapped to object properties using a predefined
+keymap (`org-reminders-keymaps`). If a key is not found in the keymap, it is used
+directly as the property name.
+
+Parameters:
+- DATA: A JSON string containing the data to be parsed.
+- TYPE: A function or constructor that creates an instance of the target object type.
+
+Steps:
+1. Parse the JSON string into a hash table using `json-parse-string`.
+2. Extract the keys from the hash table using `hash-table-keys`.
+3. Create an instance of the target object type using the provided TYPE function.
+4. Iterate over the keys:
+   - Look up the key in `org-reminders-keymaps` to determine the corresponding
+     property name.
+   - If the key is not found in the keymap, use the key directly as the property name.
+   - Set the property value in the object using `eieio-oset`.
+5. Return the populated object.
+
+Returns:
+An instance of the specified TYPE with properties set according to the parsed JSON data.
+
+This function is typically used to convert JSON data from an external source into
+a structured object for further processing."
   (let* ((htable (json-parse-string data))
          (keys (hash-table-keys htable))
          (property)
@@ -257,60 +390,88 @@ NAME is the headline's name, and LEVEL is its level (e.g., 1 for '*', 2 for '**'
     obj))
 
 (defun org-reminders-handle-item (action data)
+  "Handle an item action by parsing the data and invoking the appropriate handler."
   (let ((obj (org-reminders-parse-item-data data)))
     (funcall (intern (format "org-reminders--item-%s" (downcase action))) obj)))
 
 (defun org-reminders-reaction (log)
+  "React to a log entry by performing the appropriate action based on its type and target.
+
+This function processes a log entry by checking its target and type, and then
+invoking the corresponding handler function for the specified action.
+
+Parameters:
+- LOG: A log entry object containing details about the action, type, and data.
+
+Steps:
+1. Check if the log target is 'Org Mode'. If not, exit early.
+2. Extract the action, type, and data from the log entry.
+3. Use `pcase` to match the type:
+   - If the type is 'CommonList', call `org-reminders-handle-list` with the action and data.
+   - If the type is 'CommonReminder', call `org-reminders-handle-item` with the action and data.
+
+Returns:
+The result of the invoked handler function, or nil if the target is not 'Org Mode'.
+
+This function is typically used to process log entries and trigger appropriate
+actions in the context of Org Mode."
   (when (string= "Org Mode" (org-reminders-log-target log))
     (let ((action (org-reminders-log-action log))
           (type (org-reminders-log-type log))
           (data (org-reminders-log-data log)))
       (pcase type
         ("CommonList" (org-reminders-handle-list action data))
-        ("CommonReminder" (org-reminders-handle-item action data)))))
+        ("CommonReminder" (org-reminders-handle-item action data))))))
 
-  (defun org-reminders-parse-list-data (data)
-    (org-reminders-parse-data data #'make-org-reminders-list)))
+(defun org-reminders-parse-list-data (data)
+  "Parse JSON data into a structured `org-reminders-list` object."
+  (org-reminders-parse-data data #'make-org-reminders-list))
 
 (defun org-reminders-start-auto-sync ()
+  "Start auto-sync process."
+  (interactive)
+  (with-current-buffer (get-buffer-create org-reminders--cli-process-buffer)
+    (erase-buffer))
   (if org-reminders--cli-process
       (message "org-reminders-auto-sync has already started.")
     (setq org-reminders--cli-process
-          (start-process "org-reminders-cli"
-                         org-reminders--cli-process-buffer
-                         org-reminders-cli-command
-                         "sync"
-                         org-reminders-sync-file
-                         "-t"
-                         "auto")))
+          (org-reminders--run-cil "auto")))
   (set-process-filter org-reminders--cli-process #'org-reminders--filter))
 
 (defun org-reminders-stop-auto-sync ()
+  "Stop auto-sync process."
   (interactive)
   (when (and org-reminders--cli-process
              (process-live-p org-reminders--cli-process))
     (kill-process org-reminders--cli-process))
-  (with-current-buffer (get-buffer-create org-reminders--cli-process-buffer)
-    (erase-buffer))
   (setq org-reminders--cli-process nil)
-  (setq org-reminders--log-str-buffer nil))
+  (setq org-reminders--log-string nil))
 
 (defun org-reminders-restart-auto-sync ()
+  "Restart auto-sync process."
   (interactive)
   (org-reminders-stop-auto-sync)
   (org-reminders-start-auto-sync))
 
 (defun org-reminders-sync-all ()
+  "Synchronize all reminders and lists with the external system."
   (interactive)
-  (start-process "org-reminders-cli"
-                 org-reminders--cli-process-buffer
-                 org-reminders-cli-command
-                 "sync"
-                 org-reminders-sync-file
-                 "-t"
-                 "all"))
+  (org-reminders--run-cil "all"))
 
+(defun org-reminders-delete-item ()
+  "Mark the current Reminders item as deleted by adding the 'DELETED' tag."
+  (interactive)
+  (org-reminders-with-subtree
+   (goto-char (point-min))
+   (org-set-tags "DELETED")))
 
+(transient-define-prefix org-reminders-prefix ()
+  "Prefix for Org Reminders."
+  ["Org Reminders Commands"
+   ("A" "Sync All" org-reminders-sync-all)
+   ("a" "Auto Sync" org-reminders-start-auto-sync)
+   ("s" "Stop Auto Sync" org-reminders-stop-auto-sync)
+   ("r" "Restart Auto Sync" org-reminders-restart-auto-sync)])
 
 (provide 'org-reminders)
 ;;; org-reminders.el ends here
