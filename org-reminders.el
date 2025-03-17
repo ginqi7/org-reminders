@@ -81,8 +81,14 @@
 (defcustom org-reminders-sync-file (expand-file-name "~/.emacs.d/Reminders.org")
   "The path of sync file.")
 
-(defcustom org-reminders-sync-frequency 2
+(defcustom org-reminders-sync-frequency 1
   "Synchronization frequency indicates how many times files are saved before synchronizing.")
+
+(defcustom org-reminders-log-level "info"
+  "info or debug")
+
+(defcustom org-reminders-display-options "incomplete"
+  "all or or incomplete or complete")
 
 ;; Internal Variables
 (defvar org-reminders--cli-process nil
@@ -122,15 +128,16 @@
                                 "sync"
                                 org-reminders-sync-file
                                 "-t"
-                                type)))
+                                type
+                                "-l"
+                                org-reminders-log-level
+                                "-f"
+                                (number-to-string org-reminders-sync-frequency)
+                                "-d"
+                                org-reminders-display-options)))
     (when process-sentinel (set-process-sentinel process process-sentinel))
     (when process-filter (set-process-filter process process-filter))
     process))
-
-;; (when org-reminders-include-completed
-;;   "--include-completed")
-
-
 
 (defun org-reminders-handle-list (action data)
   "Handle Reminders List by ACTION and DATA."
@@ -151,7 +158,8 @@
 (defun org-reminders--log-pop ()
   "Pop macthed log"
   (when-let ((matched-log (org-reminders--parse-log org-reminders--log-string)))
-    (setq org-reminders--log-string (substring org-reminders--log-string (car matched-log)))
+    (setq org-reminders--log-string
+          (substring org-reminders--log-string (car matched-log)))
     matched-log))
 
 (defun org-reminders--filter (process output)
