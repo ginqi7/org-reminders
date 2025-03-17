@@ -94,6 +94,8 @@
 (defvar org-reminders--log-string nil
   "The waited to process the log string.")
 
+(defvar org-reminders--sync-once-running nil)
+
 (defvar org-reminders--priorities
   '((low ?C 9)
     (medium ?B 5)
@@ -108,15 +110,23 @@
     "completionDate" closed)
   "The keymaps for converting JSON keys to struct fields.")
 
-(defun org-reminders--run-cil (type)
+(defun org-reminders--run-cil (type
+                               &optional
+                               process-buffer
+                               process-sentinel
+                               process-filter)
   "Run org-reminders cli."
-  (start-process "org-reminders-cli"
-                 org-reminders--cli-process-buffer
-                 org-reminders-cli-command
-                 "sync"
-                 org-reminders-sync-file
-                 "-t"
-                 type))
+  (let ((process (start-process (format "org-reminders-cli-%s" type)
+                                process-buffer
+                                org-reminders-cli-command
+                                "sync"
+                                org-reminders-sync-file
+                                "-t"
+                                type)))
+    (when process-sentinel (set-process-sentinel process process-sentinel))
+    (when process-filter (set-process-filter process process-filter))
+    process))
+
 ;; (when org-reminders-include-completed
 ;;   "--include-completed")
 
@@ -140,24 +150,20 @@
 
 (defun org-reminders--log-pop ()
   "Pop macthed log"
-  (let ((matched-log (org-reminders--parse-log org-reminders--log-string)))
-    (when matched-log
-      (setq org-reminders--log-string
-            (substring org-reminders--log-string
-                       (car matched-log)))
-      matched-log)))
-
+  (when-let ((matched-log (org-reminders--parse-log org-reminders--log-string)))
+    (setq org-reminders--log-string (substring org-reminders--log-string (car matched-log)))
+    matched-log))
 
 (defun org-reminders--filter (process output)
   "org-reminders-cli output filter."
-  (setq org-reminders--log-string (concat org-reminders--log-string output))
+  (with-current-buffer (process-buffer process)
+    (goto-char (point-max))
+    (insert output))
   ;; Since the logs may not be printed in complete lines, they need to be saved first and then parsed gradually.
   (org-reminders--log-append output)
   (while-let ((matched-log (org-reminders--log-pop)))
-    (org-reminders-reaction (cdr matched-log)))
-  (with-current-buffer (process-buffer process)
-    (goto-char (point-max))
-    (insert output)))
+    (org-reminders-reaction (cdr matched-log))))
+
 
 (defun org-reminders--item-update-detail (obj)
   "Update a Reminders item in the sync file with details from OBJ.
@@ -248,7 +254,6 @@ Steps:
   "Locate a Reminders item in the current buffer by its external title."
   (let ((title (org-reminders-item-title obj)))
     (goto-char (point-min))
-    (print title)
     (org-reminders--locate-headline-by-name-and-level
      title 2)))
 
@@ -299,6 +304,24 @@ Steps:
        (org-reminders-with-subtree
         (when title (org-edit-headline (format "%s [0/0]" title)))
         (when id (org-set-property "LIST-ID" id)))))))
+
+(defun org-reminders--list-sync (obj)
+  (unless org-reminders--sync-once-running
+    (org-reminders--run-cil "once" org-reminders--cli-process-buffer #'org-reminders--once-sentinel #'org-reminders--filter)
+    (setq org-reminders--sync-once-running t)))
+
+(defun org-reminders--once-sentinel (process event)
+  "Sentinel function for org-reminders process.
+PROCESS is the process object.
+EVENT is the event describing the process state change."
+  (cond
+   ((string-match-p "finished" event)
+    (setq org-reminders--sync-once-running nil))
+   ((string-match-p "exited" event)
+    (setq org-reminders--sync-once-running nil))
+   ((string-match-p "killed" event)
+    (setq org-reminders--sync-once-running nil))))
+
 
 (defun org-reminders--parse-log (log-string)
   "Parse a log entry from the log-string string and extract its components.
@@ -436,8 +459,7 @@ actions in the context of Org Mode."
   (if org-reminders--cli-process
       (message "org-reminders-auto-sync has already started.")
     (setq org-reminders--cli-process
-          (org-reminders--run-cil "auto")))
-  (set-process-filter org-reminders--cli-process #'org-reminders--filter))
+          (org-reminders--run-cil "auto" org-reminders--cli-process-buffer nil #'org-reminders--filter))))
 
 (defun org-reminders-stop-auto-sync ()
   "Stop auto-sync process."
