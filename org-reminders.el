@@ -217,7 +217,8 @@ Steps:
     (when notes
       (org-end-of-meta-data)
       (delete-region (point) (point-max))
-      (insert notes))))
+      ;; if char-before is not '\n' insert it
+      (insert (if (= 10 (char-before)) "" "\n") notes))))
 
 (defun org-reminders--insert-item-str (obj)
   "Insert a new Reminders item into the current buffer based on the details in OBJ."
