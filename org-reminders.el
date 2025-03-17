@@ -199,7 +199,8 @@ Steps:
     ;; Update the notes section if notes are provided
     (when notes
       (org-end-of-meta-data)
-      (replace-region-contents (point) (point-max) notes))))
+      (delete-region (point) (point-max))
+      (insert notes))))
 
 (defun org-reminders--insert-item-str (obj)
   "Insert a new Reminders item into the current buffer based on the details in OBJ."
