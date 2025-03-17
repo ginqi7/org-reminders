@@ -87,7 +87,7 @@
 (defcustom org-reminders-log-level "info"
   "info or debug")
 
-(defcustom org-reminders-display-options "incomplete"
+(defcustom org-reminders-display-options "all"
   "all or or incomplete or complete")
 
 ;; Internal Variables
@@ -103,9 +103,10 @@
 (defvar org-reminders--sync-once-running nil)
 
 (defvar org-reminders--priorities
-  '((low ?C 9)
-    (medium ?B 5)
-    (high ?A 1)))
+  '(9 ?C
+      5 ?B
+      1 ?A
+      0 ?))
 
 (defvar org-reminders-keymaps
   '("externalId" external-id
@@ -202,7 +203,8 @@ Steps:
         (external-id (org-reminders-item-external-id obj))
         (closed (org-reminders-item-closed obj))
         (scheduled (org-reminders-item-scheduled obj))
-        (completed (org-reminders-item-completed obj)))
+        (completed (org-reminders-item-completed obj))
+        (priority (org-reminders-item-priority obj)))
     (when hash (org-set-property "HASH" hash))
     (when last-modified (org-set-property "LAST-MODIFIED" last-modified))
     (when external-id (org-set-property "EXTERNAL-ID" external-id))
@@ -210,6 +212,7 @@ Steps:
     (when closed (org-add-planning-info 'closed closed))
     (when scheduled (org-add-planning-info 'scheduled scheduled))
     (org-todo (if (equal :false completed) 'todo 'done))
+    (when (not (= 0 priority)) (org-priority (plist-get org-reminders--priorities priority)))
     ;; Update the notes section if notes are provided
     (when notes
       (org-end-of-meta-data)
