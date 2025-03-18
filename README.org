@@ -13,6 +13,9 @@ The project underwent a large-scale refactoring, with the old version maintained
 
 https://github.com/user-attachments/assets/f6487deb-d1e4-4d03-ba03-57a0409ac596
 
+* Detailed Video
+https://youtu.be/RrR4EXZgYmU
+
 * Prerequisites
 
 - *[[https://github.com/ginqi7/org-reminders-cli][org-reminders-cli]]* : A CLI tool for syncing OS X Reminders with Emacs org-mode, designed to work with ginqi7/org-reminders.
