@@ -55,6 +55,20 @@
   id
   data)
 
+;; Custom Variables
+(defcustom org-reminders-sync-file (expand-file-name "~/.emacs.d/Reminders.org")
+  "The path of sync file.")
+(defcustom org-reminders-cli-command (executable-find "org-reminders")
+  "The path of org-reminders cli.")
+(defcustom org-reminders-include-completed t
+  "Show completed reminders?")
+(defcustom org-reminders-sync-frequency 1
+  "Synchronization frequency indicates how many times files are saved before synchronizing.")
+(defcustom org-reminders-log-level "info"
+  "info or debug")
+(defcustom org-reminders-display-options "all"
+  "all or or incomplete or complete")
+
 ;; Macros
 (defmacro org-reminders-with-subtree (&rest body)
   "Run BODY in current subtree."
@@ -71,24 +85,6 @@
        ,@body
        (save-buffer))))
 
-;; Custom Variables
-(defcustom org-reminders-cli-command (executable-find "org-reminders")
-  "The path of org-reminders cli.")
-
-(defcustom org-reminders-include-completed t
-  "Show completed reminders?")
-
-(defcustom org-reminders-sync-file (expand-file-name "~/.emacs.d/Reminders.org")
-  "The path of sync file.")
-
-(defcustom org-reminders-sync-frequency 1
-  "Synchronization frequency indicates how many times files are saved before synchronizing.")
-
-(defcustom org-reminders-log-level "info"
-  "info or debug")
-
-(defcustom org-reminders-display-options "all"
-  "all or or incomplete or complete")
 
 ;; Internal Variables
 (defvar org-reminders--cli-process nil
@@ -106,7 +102,7 @@
   '(9 ?C
       5 ?B
       1 ?A
-      0 ?))
+      0 32))
 
 (defvar org-reminders-keymaps
   '("externalId" external-id
@@ -172,7 +168,6 @@
   (org-reminders--log-append output)
   (while-let ((matched-log (org-reminders--log-pop)))
     (org-reminders-reaction (cdr matched-log))))
-
 
 (defun org-reminders--item-update-detail (obj)
   "Update a Reminders item in the sync file with details from OBJ.
