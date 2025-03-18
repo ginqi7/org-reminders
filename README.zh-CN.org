@@ -2,24 +2,23 @@
 
 org-reminders 是一个 Emacs 插件，旨在促进 macOS Reminders（提醒事项）和 Org mode 之间的交互。该插件允许您在 Org mode 中管理存储在 macOS Reminders 中的提醒事项，为依赖这两个系统的用户提供无缝体验。
 
-这个项目依赖于 [[https://github.com/keith/reminders-cli][reminders-cli]] 命令行工具，它提供了便捷的命令去操控 macOS Reminders（提醒事项）。
+该项目进行了大规模的重构，旧版本保留在 [[https://github.com/ginqi7/org-reminders/tree/v1][v1]] 分支中。
 
 * 功能
-- 添加提醒事项：轻松地将新的提醒事项添加到 macOS Reminders 中的特定列表。
-- 编辑提醒事项：更新现有提醒事项的标题、备注
-- 完成和取消完成提醒事项：切换提醒事项的完成状态。
-- 删除提醒事项：从列表中删除提醒事项。
-- 显示提醒事项：使用 Org mode 结构以有组织的方式呈现提醒事项。
-- 同步功能：在 macOS Reminders 和 Org mode 之间同步提醒事项。
+- 自动同步：当 Org Mode 文件发生更改并保存，或提醒事项有更新时，系统会自动完成同步，确保两端数据实时一致。
+- 无缝映射：它能够将 Org Mode 的 Todo 功能与提醒事项的核心概念进行智能映射，实现两者之间的流畅转换与兼容。
 
-[[https://github.com/user-attachments/assets/a15df8bd-0739-4a48-8739-4e3ceee64b0b]]
+https://github.com/user-attachments/assets/f6487deb-d1e4-4d03-ba03-57a0409ac596
+
+* 详解视频
+https://www.bilibili.com/video/BV1tiX5YFEZZ/
 
 * 前提条件
-- [[https://github.com/keith/reminders-cli][reminders-cli]]：一个用于与 macOS 提醒事项交互的简单 CLI（命令行界面）工具。
+[[https://github.com/ginqi7/org-reminders-cli][org-reminders-cli]] : 一个用于将 macOS 提醒事项与 Emacs Org Mode 同步的命令行工具，专为与 ginqi7/org-reminders 配合使用而设计。
 * 安装
 ** reminders-cli
 #+begin_src shell
-brew install keith/formulae/reminders-cli
+brew install ginqi7/formulae/org-reminders-cli
 #+end_src
 
 ** 授予提醒事项访问权限
@@ -51,53 +50,20 @@ git clone git@github.com:ginqi7/org-reminders.git ~/.emacs.d/lisp/org-reminders
 #+end_src
 
 * 变量
-| 变量                            | 描述                      | 默认值 |
-|---------------------------------+---------------------------+--------|
-| org-reminders-include-completed | Show completed reminders? | t      |
+| 变量                          | 描述                                                                                      | 默认值                     |
+|-------------------------------+-------------------------------------------------------------------------------------------+----------------------------|
+| org-reminders-sync-file       | 指定将数据同步到哪个 Org Mode 文件。                                                         | "~/.emacs.d/Reminders.org" |
+| org-reminders-display-options | 显示提醒事项的内容，默认显示全部。可选值为：all（全部）、incomplete（未完成）或 complete（已完成）。 | "all"                      |
+| org-reminders-sync-frequency  | 同步频率，表示保存文件多少次触发一次同步，默认值为 1。                                           | 1                          |
+
 
 * 用法
-** 全局命令
-*** A Transient Prefix
+** A Transient Prefix
 - *org-reminders-prefix* : 定义了一个 transient-prefix，可以快速的访问多个 org-reminders 命令
-
-*** 查看提醒事项
-
-要查看您的提醒事项，运行 =org-reminders= 命令：
-
-此命令将切换到名为 =*reminders*= 的缓冲区，并显示按列表组织的所有提醒事项。
-
-*** 添加提醒事项列表
-
-要添加提醒事项列表，运行 =org-reminders-add-list= 命令：
-
-此命令需要输入： =list-name= 。
-
-*** 添加提醒事项
-
-要添加提醒事项，运行 =org-reminders-add-reminder= 命令：
-
-此命令需要输入： =list-name= 、 =title= ，以及可选的 =priority= 和 =notes= 。
-
-*** 删除提醒事项
-
-要删除提醒事项，运行 =org-reminders-add-reminder= 命令：
-
-此命令需要输入： =list-name= 、 =title= ，以及可选的 =priority= 和 =notes= 。
-
-** 在 Org mode 文件中
-*** 同步缓冲区
-
-=org-reminders-sync-buffer= ：缓冲区元素和 Reminders 应用之间的同步。
-
-*** 删除指针处的元素
-=org-reminders-delete-element-at-pointer= ：删除指针处的元素。
-
-*** 同步指针处的元素
-=org-reminders-sync-element-at-pointer= ：指针处的元素与 Reminders 应用的同步。
-
-
-* 已知问题
-- 无法删除已完成的提醒事项。
+** org-reminders-sync-all
+将所有提醒事项数据刷新为 Org 格式。
+** org-reminders-restart-auto-sync
+启用 Org Mode 文件与提醒事项之间的自动同步功能。
 
 * 贡献
 欢迎贡献！请通过项目的存储库提交问题和拉取请求。

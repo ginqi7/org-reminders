@@ -4,28 +4,25 @@
 
 org-reminders is an Emacs plugin designed to facilitate interactions between macOS Reminders and Org mode. The plugin allows you to manage reminders stored in macOS Reminders from within Org mode, providing a seamless experience for users who rely on both systems.
 
-This project depends on the [[https://github.com/keith/reminders-cli][reminders-cli]] command-line tool, offering easy-to-use commands to interact with macOS Reminders.
+The project underwent a large-scale refactoring, with the old version maintained in the [[https://github.com/ginqi7/org-reminders/tree/v1][v1]] ranch.
 
 * Features
 
-- *Add Reminders*: Easily add new reminders to specific lists in macOS Reminders.
-- *Edit Reminders*: Update the title, notes of existing reminders.
-- *Complete and Uncomplete Reminders*: Toggle the completion status of your reminders.
-- *Delete Reminders*: Remove reminders from your lists.
-- *Display Reminders*: Render reminders in an organized manner using Org mode structure.
-- *Sync Functionality*: Synchronize reminders between macOS Reminders and Org mode.
+- *Automatic synchronization* : Org Mode files and reminders sync automatically upon saving or updates, ensuring real-time data consistency across devices.
+- *Seamlessly mapping* : Org Mode's Todo functionality to Reminders' core concepts for fluid conversion and compatibility.
 
-[[https://github.com/user-attachments/assets/a15df8bd-0739-4a48-8739-4e3ceee64b0b]]
+https://github.com/user-attachments/assets/f6487deb-d1e4-4d03-ba03-57a0409ac596
 
 * Prerequisites
 
-- *[[https://github.com/keith/reminders-cli][reminders-cli]]* : A simple CLI for interacting with macOS reminders
+- *[[https://github.com/ginqi7/org-reminders-cli][org-reminders-cli]]* : A CLI tool for syncing OS X Reminders with Emacs org-mode, designed to work with ginqi7/org-reminders.
+
 
 * Installation
 
 ** reminders-cli
 #+begin_src shell
-  brew install keith/formulae/reminders-cli
+brew install ginqi7/formulae/org-reminders-cli
 #+end_src
 
 * grant reminders access
@@ -60,49 +57,20 @@ Add the following line to your Emacs configuration file (e.g., `.emacs` or `init
 #+end_src
 
 * Variables
-| variable                        | description               | default-value |
-|---------------------------------+---------------------------+---------------|
-| org-reminders-include-completed | Show completed reminders? | t             |
+| variable                      | description                                                                                                                  | default-value              |
+|-------------------------------+------------------------------------------------------------------------------------------------------------------------------+----------------------------|
+| org-reminders-sync-file       | Specify which Org Mode file to synchronize the data to.                                                                      | "~/.emacs.d/Reminders.org" |
+| org-reminders-display-options | Display the content of those reminders, with the default being all. The available options are: all, incomplete, or complete. | "all"                      |
+| org-reminders-sync-frequency  | The synchronization frequency, indicating how many file saves trigger one synchronization, is set to 1 by default.           | 1                          |
 
 
 * Usage
-** Global
-*** A Transient Prefix
+** A Transient Prefix
 - *org-reminders-prefix* : A transient prefix for multiple org-reminders commands.
-*** Viewing Reminders in Org manner
-To view your reminders, run the =org-reminders= command:
-
-This command will switch to a buffer named `*reminders*` and display all your reminders organized by lists.
-
-*** Adding a Reminder List
-
-To add a Reminder List, run the =org-reminders-add-list= command:
-
-This command requires input: ~list-name~.
-
-*** Adding a Reminder
-
-To add a Reminder, run the ~org-reminders-add-reminder~ command:
-
-This command requires input: ~list-name~, ~title~, and optionally, ~priority~ and ~notes~.
-
-*** Delete a Reminder
-
-To add a Reminder, run the ~org-reminders-add-reminder~ command:
-
-This command requires input: ~list-name~, ~title~, and optionally, ~priority~ and ~notes~.
-
-
-** In a Org mode file
-*** Synchronizing Buffer
-- *org-reminders-sync-buffer* : Synchronization between buffer elements and the Reminders app.
-*** Delete Element at pointer
-- *org-reminders-delete-element-at-pointer* : Delete the element at point.
-*** Synchronizing Element at pointer
-- *org-reminders-sync-element-at-pointer* : Synchronization of the element at point with the Reminders app.
-
-* Known Issues
-- Completed reminders cannot be deleted.
+** org-reminders-sync-all
+Flush all Reminders data to Org manner
+** org-reminders-restart-auto-sync
+Enable automatic synchronization between Org Mode files and Reminders.
 
 * Contributions
 
