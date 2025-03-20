@@ -60,8 +60,6 @@
   "The path of sync file.")
 (defcustom org-reminders-cli-command (executable-find "org-reminders")
   "The path of org-reminders cli.")
-(defcustom org-reminders-include-completed t
-  "Show completed reminders?")
 (defcustom org-reminders-sync-frequency 1
   "Synchronization frequency indicates how many times files are saved before synchronizing.")
 (defcustom org-reminders-log-level "info"
@@ -313,21 +311,9 @@ Steps:
         (when id (org-set-property "LIST-ID" id)))))))
 
 (defun org-reminders--list-sync (obj)
-  (unless org-reminders--sync-once-running
-    (org-reminders--run-cil "once" org-reminders--cli-process-buffer #'org-reminders--once-sentinel #'org-reminders--filter)
-    (setq org-reminders--sync-once-running t)))
-
-(defun org-reminders--once-sentinel (process event)
-  "Sentinel function for org-reminders process.
-PROCESS is the process object.
-EVENT is the event describing the process state change."
-  (cond
-   ((string-match-p "finished" event)
-    (setq org-reminders--sync-once-running nil))
-   ((string-match-p "exited" event)
-    (setq org-reminders--sync-once-running nil))
-   ((string-match-p "killed" event)
-    (setq org-reminders--sync-once-running nil))))
+  (when org-reminders--cli-process
+    (process-send-string org-reminders--cli-process
+                         "Sync Once\n")))
 
 
 (defun org-reminders--parse-log (log-string)
