@@ -84,6 +84,7 @@
        (save-buffer))))
 
 
+
 ;; Internal Variables
 (defvar org-reminders--cli-process nil
   "The org-reminders-cli-process.")
@@ -208,7 +209,7 @@ Steps:
     (when title (org-edit-headline title))
     (when closed (org-add-planning-info 'closed closed))
     (when scheduled (org-add-planning-info 'scheduled scheduled))
-    (org-todo (if (equal :false completed) 'todo 'done))
+    (org-todo (if (equal :false completed) "TODO" "DONE"))
     (when (not (= 0 priority)) (org-priority (plist-get org-reminders--priorities priority)))
     ;; Update the notes section if notes are provided
     (when notes
