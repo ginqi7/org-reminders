@@ -77,7 +77,7 @@
 
 (defmacro org-reminders-with-sync-file (&rest body)
   "Run BODY in org-reminders-sync-file."
-  `(with-current-buffer (find-file-noselect ,org-reminders-sync-file)
+  `(with-current-buffer (find-file-noselect org-reminders-sync-file)
      (save-excursion
        (goto-char (point-min))
        ,@body
