@@ -125,7 +125,7 @@
                                 process-buffer
                                 org-reminders-cli-command
                                 "sync"
-                                org-reminders-sync-file
+                                (expand-file-name org-reminders-sync-file)
                                 "-t"
                                 type
                                 "-l"
@@ -470,12 +470,14 @@ actions in the context of Org Mode."
 (defun org-reminders-restart-auto-sync ()
   "Restart auto-sync process."
   (interactive)
+  (org-reminders-check-sync-file)
   (org-reminders-stop-auto-sync)
   (org-reminders-start-auto-sync))
 
 (defun org-reminders-sync-all ()
   "Synchronize all reminders and lists with the external system."
   (interactive)
+  (org-reminders-check-sync-file)
   (org-reminders--run-cil "all" org-reminders--cli-sync-all-process-buffer))
 
 (defun org-reminders-delete-item ()
@@ -484,6 +486,13 @@ actions in the context of Org Mode."
   (org-reminders-with-subtree
    (goto-char (point-min))
    (org-set-tags "DELETED")))
+
+(defun org-reminders-check-sync-file ()
+  "Check if the sync file exists. If not, prompt the user to create it."
+  (unless (file-exists-p org-reminders-sync-file)
+    (when (yes-or-no-p (format "The sync file (%s) does not exist. Would you like to create it?" org-reminders-sync-file))
+      (make-empty-file org-reminders-sync-file t)
+      (message "Sync file created: %s" org-reminders-sync-file))))
 
 (transient-define-prefix org-reminders-prefix ()
   "Prefix for Org Reminders."
