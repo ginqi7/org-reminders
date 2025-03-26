@@ -91,6 +91,10 @@
 (defvar org-reminders--cli-process-buffer "*org-reminders-cli*"
   "The org-reminders-cli-process buffer.")
 
+(defvar org-reminders--cli-sync-all-process-buffer "*org-reminders-cli-sync-all*"
+  "The org-reminders-cli-process sync all buffer.")
+
+
 (defvar org-reminders--log-string nil
   "The waited to process the log string.")
 
@@ -472,7 +476,7 @@ actions in the context of Org Mode."
 (defun org-reminders-sync-all ()
   "Synchronize all reminders and lists with the external system."
   (interactive)
-  (org-reminders--run-cil "all"))
+  (org-reminders--run-cil "all" org-reminders--cli-sync-all-process-buffer))
 
 (defun org-reminders-delete-item ()
   "Mark the current Reminders item as deleted by adding the 'DELETED' tag."
