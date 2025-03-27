@@ -20,6 +20,9 @@ https://youtu.be/RrR4EXZgYmU
 
 - *[[https://github.com/ginqi7/org-reminders-cli][org-reminders-cli]]* : A CLI tool for syncing OS X Reminders with Emacs org-mode, designed to work with ginqi7/org-reminders.
 
+** Emacs dependencies
+- [[https://github.com/ginqi7/websocket-bridge][websocket-bridge]] : A bridge that connects Emacs and Swift programs via WebSocket.
+- [[https://github.com/ahyatt/emacs-websocket][emacs-websocket]] : A websocket implementation in elisp, for emacs.
 
 * Installation
 
@@ -45,11 +48,17 @@ Running this command in Eshell will populate Emacs permissions.
 - clone the project in your own emacs configuration files directory, like:
 #+begin_src shell
   git clone git@github.com:ginqi7/org-reminders.git ~/.emacs.d/lisp/org-reminders
+  git clone git@github.com:ginqi7/websocket-bridge.git ~/.emacs.d/lisp/websocket-bridge
+  git clone git@github.com:ahyatt/emacs-websocket.git ~/.emacs.d/lisp/emacs-websocket
 #+end_src
 
+The [[https://elpa.gnu.org/packages/websocket.html][emacs-websocket]] can be downloaded from ELPA.
+
 - add the path to ‘load-path’
-#+begin_src shell
-(add-to-list 'load-path (expand-file-name "~/.emacs.d/lisp/d/lisp/org-reminders"))
+#+begin_src emacs-lisp
+  (add-to-list 'load-path (expand-file-name "~/.emacs.d/lisp/websocket-bridge"))
+  (add-to-list 'load-path (expand-file-name "~/.emacs.d/lisp/emacs-websocket"))
+  (add-to-list 'load-path (expand-file-name "~/.emacs.d/lisp/d/lisp/org-reminders"))
 #+end_src
 
 * Configuration
@@ -74,7 +83,8 @@ Add the following line to your Emacs configuration file (e.g., `.emacs` or `init
 Flush all Reminders data to Org manner
 ** org-reminders-restart-auto-sync
 Enable automatic synchronization between Org Mode files and Reminders.
+** Check Log
+- run =websocket-bridge-app-log-buffer= select =org-reminders=
 
 * Contributions
-
 Contributions are welcome! Please submit issues and pull requests through the project’s repository.

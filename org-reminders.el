@@ -27,6 +27,7 @@
 (require 'org)
 (require 'cl-seq)
 (require 'json)
+(require 'websocket-bridge)
 (require 'transient)
 
 ;; Structures
@@ -86,20 +87,9 @@
 
 
 ;; Internal Variables
-(defvar org-reminders--cli-process nil
-  "The org-reminders-cli-process.")
-
-(defvar org-reminders--cli-process-buffer "*org-reminders-cli*"
-  "The org-reminders-cli-process buffer.")
 
 (defvar org-reminders--cli-sync-all-process-buffer "*org-reminders-cli-sync-all*"
   "The org-reminders-cli-process sync all buffer.")
-
-
-(defvar org-reminders--log-string nil
-  "The waited to process the log string.")
-
-(defvar org-reminders--sync-once-running nil)
 
 (defvar org-reminders--priorities
   '(9 ?C
@@ -151,26 +141,6 @@
     (eieio-oset obj 'org-list (org-reminders-parse-list-data json))
     obj))
 
-(defun org-reminders--log-append (str)
-  "Append STR to log."
-  (setq org-reminders--log-string (concat org-reminders--log-string str)))
-
-(defun org-reminders--log-pop ()
-  "Pop macthed log"
-  (when-let ((matched-log (org-reminders--parse-log org-reminders--log-string)))
-    (setq org-reminders--log-string
-          (substring org-reminders--log-string (car matched-log)))
-    matched-log))
-
-(defun org-reminders--filter (process output)
-  "org-reminders-cli output filter."
-  (with-current-buffer (process-buffer process)
-    (goto-char (point-max))
-    (insert output))
-  ;; Since the logs may not be printed in complete lines, they need to be saved first and then parsed gradually.
-  (org-reminders--log-append output)
-  (while-let ((matched-log (org-reminders--log-pop)))
-    (org-reminders-reaction (cdr matched-log))))
 
 (defun org-reminders--item-update-detail (obj)
   "Update a Reminders item in the sync file with details from OBJ.
@@ -254,7 +224,8 @@ Steps:
     (org-element-map tree 'headline
       (lambda (hl)
         (when (and (string= (org-element-property :raw-value hl) name)
-                   (= (org-element-property :level hl) level))
+                   (= (org-element-property :level hl) level)
+                   (not (org-element-property :EXTERNAL-ID hl)))
           (setq found hl)))
       nil 'first-match (= level 1))
     (if found
@@ -316,10 +287,11 @@ Steps:
         (when id (org-set-property "LIST-ID" id)))))))
 
 (defun org-reminders--list-sync (obj)
-  (when org-reminders--cli-process
-    (process-send-string org-reminders--cli-process
-                         "Sync Once\n")))
+  (org-reminders-send-message "sync-once"))
 
+(defun org-reminders-send-message (&rest args)
+  (apply #'websocket-bridge-call
+         (append (list "org-reminders") args)))
 
 (defun org-reminders--parse-log (log-string)
   "Parse a log entry from the log-string string and extract its components.
@@ -411,6 +383,14 @@ a structured object for further processing."
       (eieio-oset obj property (gethash key htable)))
     obj))
 
+(defun org-reminders-message-handle (uuid action type base64-data)
+  (let ((data (base64-decode-string base64-data)))
+    (pcase type
+      ("CommonList" (org-reminders-handle-list action data))
+      ("CommonReminder" (org-reminders-handle-item action data))))
+  (org-reminders-send-message "finish" uuid))
+
+
 (defun org-reminders-handle-item (action data)
   "Handle an item action by parsing the data and invoking the appropriate handler."
   (let ((obj (org-reminders-parse-item-data data)))
@@ -452,28 +432,26 @@ actions in the context of Org Mode."
 (defun org-reminders-start-auto-sync ()
   "Start auto-sync process."
   (interactive)
-  (with-current-buffer (get-buffer-create org-reminders--cli-process-buffer)
-    (erase-buffer))
-  (if org-reminders--cli-process
-      (message "org-reminders-auto-sync has already started.")
-    (setq org-reminders--cli-process
-          (org-reminders--run-cil "auto" org-reminders--cli-process-buffer nil #'org-reminders--filter))))
+  (websocket-bridge-app-start "org-reminders"
+                              org-reminders-cli-command
+                              "websocket-bridge"))
+
 
 (defun org-reminders-stop-auto-sync ()
   "Stop auto-sync process."
   (interactive)
-  (when (and org-reminders--cli-process
-             (process-live-p org-reminders--cli-process))
-    (kill-process org-reminders--cli-process))
-  (setq org-reminders--cli-process nil)
-  (setq org-reminders--log-string nil))
+  (websocket-bridge-app-exit "org-reminders"))
+
+
 
 (defun org-reminders-restart-auto-sync ()
   "Restart auto-sync process."
   (interactive)
   (org-reminders-check-sync-file)
   (org-reminders-stop-auto-sync)
-  (org-reminders-start-auto-sync))
+  (org-reminders-start-auto-sync)
+  (websocket-bridge-app-open-buffer "org-reminders"))
+
 
 (defun org-reminders-sync-all ()
   "Synchronize all reminders and lists with the external system."
