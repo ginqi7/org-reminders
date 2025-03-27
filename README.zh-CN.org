@@ -15,6 +15,12 @@ https://www.bilibili.com/video/BV1tiX5YFEZZ/
 
 * 前提条件
 [[https://github.com/ginqi7/org-reminders-cli][org-reminders-cli]] : 一个用于将 macOS 提醒事项与 Emacs Org Mode 同步的命令行工具，专为与 ginqi7/org-reminders 配合使用而设计。
+
+** Emacs 依赖项   
+
+- [[https://github.com/ginqi7/websocket-bridge][websocket-bridge]] : 一个通过WebSocket连接Emacs和Swift程序的桥接工具。
+- [[https://github.com/ahyatt/emacs-websocket][emacs-websocket]] : 一个用elisp实现的WebSocket库，供Emacs使用。
+
 * 安装
 ** reminders-cli
 #+begin_src shell
@@ -35,12 +41,16 @@ osascript -e 'tell application "Reminders" to show (first list whose name is "bl
 
 - 将项目克隆到您自己的 Emacs 配置文件目录中，例如：
 #+begin_src shell
-git clone git@github.com:ginqi7/org-reminders.git ~/.emacs.d/lisp/org-reminders
+  git clone git@github.com:ginqi7/org-reminders.git ~/.emacs.d/lisp/org-reminders
+  git clone git@github.com:ginqi7/websocket-bridge.git ~/.emacs.d/lisp/websocket-bridge
+  git clone git@github.com:ahyatt/emacs-websocket.git ~/.emacs.d/lisp/emacs-websocket
 #+end_src
 
 - 将路径添加到 ‘load-path’：
-#+begin_src shell
-(add-to-list 'load-path (expand-file-name "~/.emacs.d/lisp/org-reminders"))
+#+begin_src emacs-lisp
+  (add-to-list 'load-path (expand-file-name "~/.emacs.d/lisp/websocket-bridge"))
+  (add-to-list 'load-path (expand-file-name "~/.emacs.d/lisp/emacs-websocket"))
+  (add-to-list 'load-path (expand-file-name "~/.emacs.d/lisp/org-reminders"))
 #+end_src
 
 * 配置
@@ -64,6 +74,10 @@ git clone git@github.com:ginqi7/org-reminders.git ~/.emacs.d/lisp/org-reminders
 将所有提醒事项数据刷新为 Org 格式。
 ** org-reminders-restart-auto-sync
 启用 Org Mode 文件与提醒事项之间的自动同步功能。
+
+** 查看日志
+- 运行 =websocket-bridge-app-log-buffer= 选择 =org-reminders=
+
 
 * 贡献
 欢迎贡献！请通过项目的存储库提交问题和拉取请求。
