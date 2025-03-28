@@ -432,6 +432,8 @@ actions in the context of Org Mode."
 (defun org-reminders-start-auto-sync ()
   "Start auto-sync process."
   (interactive)
+  (unless websocket-bridge-server
+    (websocket-bridge-server-start))
   (websocket-bridge-app-start "org-reminders"
                               org-reminders-cli-command
                               "websocket-bridge"))
