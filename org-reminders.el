@@ -56,17 +56,40 @@
   id
   data)
 
+(defgroup org-reminders nil
+  "A group of settings for org-reminders."
+  :group 'applications
+  :prefix "org-reminders-")
+
 ;; Custom Variables
 (defcustom org-reminders-sync-file (expand-file-name "~/.emacs.d/Reminders.org")
-  "The path of sync file.")
+  "The path of sync file."
+  :type 'string
+  :group 'org-reminders)
+
 (defcustom org-reminders-cli-command (executable-find "org-reminders")
-  "The path of org-reminders cli.")
+  "The path of org-reminders cli."
+  :type 'string
+  :group 'org-reminders)
+
 (defcustom org-reminders-sync-frequency 1
-  "Synchronization frequency indicates how many times files are saved before synchronizing.")
+  "Synchronization frequency indicates how many times files are saved before synchronizing."
+  :type 'integer
+  :group 'org-reminders)
+
 (defcustom org-reminders-log-level "info"
-  "info or debug")
+  "Log Level: info or debug"
+  :type '(choice (const :tag "Info" "info")
+                 (const :tag "Debug" "debug"))
+  :group 'org-reminders)
+
 (defcustom org-reminders-display-options "all"
-  "all or or incomplete or complete")
+  "Display Options: all or or incomplete or complete"
+  :type '(choice (const :tag "All" "all")
+                 (const :tag "Incomplete" "incomplete")
+                 (const :tag "Complete" "complete"))
+  :group 'org-reminders)
+
 
 ;; Macros
 (defmacro org-reminders-with-subtree (&rest body)
@@ -473,7 +496,17 @@ actions in the context of Org Mode."
   (unless (file-exists-p org-reminders-sync-file)
     (when (yes-or-no-p (format "The sync file (%s) does not exist. Would you like to create it?" org-reminders-sync-file))
       (make-empty-file org-reminders-sync-file t)
-      (message "Sync file created: %s" org-reminders-sync-file))))
+      (message "Sync file created: %s" org-reminders-sync-file)))
+  (org-reminders-with-sync-file
+   (org-reminders-mode 1)))
+
+;;;###autoload
+(define-minor-mode org-reminders-mode
+  "Toggle Org Reminders mode.
+When enabled, org reminders features are activated."
+  :init-value nil
+  :lighter " OrgR"
+  :group 'org-reminders)
 
 (transient-define-prefix org-reminders-prefix ()
   "Prefix for Org Reminders."
