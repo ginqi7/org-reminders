@@ -479,10 +479,12 @@ actions in the context of Org Mode."
 
 
 (defun org-reminders-sync-all ()
-  "Synchronize all reminders and lists with the external system."
+  "Pull all MacOS Reminders data to an Org mode file."
   (interactive)
   (org-reminders-check-sync-file)
   (org-reminders--run-cil "all" org-reminders--cli-sync-all-process-buffer))
+
+(defalias 'org-reminders-sync-pull-all #'org-reminders-sync-all)
 
 (defun org-reminders-delete-item ()
   "Mark the current Reminders item as deleted by adding the 'DELETED' tag."
