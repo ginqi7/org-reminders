@@ -58,7 +58,7 @@ The [[https://elpa.gnu.org/packages/websocket.html][emacs-websocket]] can be dow
 #+begin_src emacs-lisp
   (add-to-list 'load-path (expand-file-name "~/.emacs.d/lisp/websocket-bridge"))
   (add-to-list 'load-path (expand-file-name "~/.emacs.d/lisp/emacs-websocket"))
-  (add-to-list 'load-path (expand-file-name "~/.emacs.d/lisp/d/lisp/org-reminders"))
+  (add-to-list 'load-path (expand-file-name "~/.emacs.d/lisp/org-reminders"))
 #+end_src
 
 * Configuration
